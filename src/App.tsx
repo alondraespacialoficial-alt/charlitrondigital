@@ -11,14 +11,22 @@ import { Footer } from './components/Footer';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { LegalPage, LegalTab } from './components/LegalPage';
 import { CookieConsent } from './components/CookieConsent';
+import { AgencyPage } from './components/AgencyPage';
 
 export default function App() {
   const [legalTab, setLegalTab] = useState<LegalTab | null>(null);
+  const [agencyPage, setAgencyPage] = useState(false);
 
   // Sync with window hash for direct linking / back navigation
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
+      if (hash === '#agencia') {
+        setAgencyPage(true);
+        setLegalTab(null);
+        return;
+      }
+      setAgencyPage(false);
       if (hash.includes('privacidad') || hash === '#legal-privacidad' || hash === '#aviso-privacidad') {
         setLegalTab('privacidad');
       } else if (hash.includes('terminos') || hash === '#legal-terminos' || hash === '#terminos-condiciones') {
@@ -34,7 +42,11 @@ export default function App() {
 
     handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handleHashChange);
+    };
   }, []);
 
   const handleOpenLegal = (tab: LegalTab) => {
@@ -45,11 +57,22 @@ export default function App() {
 
   const handleBackToMain = () => {
     setLegalTab(null);
-    if (window.location.hash.startsWith('#legal')) {
-      window.history.pushState(null, '', window.location.pathname + window.location.search);
+    setAgencyPage(false);
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (agencyPage) {
+    return (
+      <>
+        <AgencyPage onBack={handleBackToMain} />
+        <FloatingWhatsApp />
+        <CookieConsent onOpenLegal={handleOpenLegal} />
+      </>
+    );
+  }
 
   if (legalTab) {
     return (
