@@ -1,0 +1,32 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#09090B"/>
+  <rect x="0" y="0" width="1200" height="630" fill="url(#bgGlow)"/>
+  <g opacity="0.8">
+    <circle cx="1020" cy="130" r="120" fill="#FACC15" fill-opacity="0.08"/>
+    <circle cx="210" cy="500" r="150" fill="#FACC15" fill-opacity="0.06"/>
+  </g>
+  <g>
+    <path d="M672 242L728 328L616 328L672 242Z" fill="#FACC15" opacity="0.9"/>
+    <rect x="648" y="312" width="48" height="110" rx="8" fill="#FACC15" opacity="0.88"/>
+    <rect x="625" y="370" width="96" height="22" rx="11" fill="#FACC15" opacity="0.88"/>
+  </g>
+  <g>
+    <rect x="120" y="110" width="190" height="190" rx="42" fill="#FACC15"/>
+    <rect x="153" y="144" width="124" height="122" rx="26" fill="#09090B"/>
+    <path d="M190 233L226 169L268 233H190Z" fill="#FACC15"/>
+    <circle cx="226" cy="185" r="20" fill="#FACC15"/>
+  </g>
+  <text x="390" y="262" fill="#F8FAFC" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700" letter-spacing="1">CHARLITRON</text>
+  <text x="390" y="342" fill="#FACC15" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="6">DIGITAL</text>
+  <text x="390" y="410" fill="#E4E4E7" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="500">Agencia digital en San Luis Potosí</text>
+  <text x="390" y="468" fill="#A1A1AA" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="500">Webs • Apps • IA • Activaciones BTL</text>
+  <rect x="390" y="500" width="246" height="56" rx="28" fill="#FACC15"/>
+  <text x="447" y="538" fill="#09090B" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">Hablemos</text>
+  <defs>
+    <linearGradient id="bgGlow" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111111"/>
+      <stop offset="0.5" stop-color="#09090B"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+  </defs>
+</svg>
