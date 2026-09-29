@@ -204,7 +204,7 @@ export const AgencyPage: React.FC<AgencyPageProps> = ({ onBack }) => (
                     src={`/${image}`}
                     alt={`Imagen ${imageNumber} del catálogo de servicios Charlitron Agencia`}
                     loading="lazy"
-                    className="aspect-[4/3] w-full object-cover"
+                    className="aspect-[4/3] w-full bg-[#f4cf10] object-contain"
                   />
                   <a
                     href={imageWhatsApp}
