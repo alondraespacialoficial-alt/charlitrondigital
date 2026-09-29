@@ -49,6 +49,24 @@ const services = [
   }
 ];
 
+const agencyGallery = [
+  'Gemini_Generated_Image_207yek207yek207y.jpg',
+  'Gemini_Generated_Image_5tjp835tjp835tjp.jpg',
+  'Gemini_Generated_Image_a3pvsia3pvsia3pv.jpg',
+  'Gemini_Generated_Image_aascquaascquaasc.jpg',
+  'Gemini_Generated_Image_chdsljchdsljchds.jpg',
+  'Gemini_Generated_Image_errt2berrt2berrt.jpg',
+  'Gemini_Generated_Image_k8384uk8384uk838.jpg',
+  'Gemini_Generated_Image_n82gxkn82gxkn82g.jpg',
+  'Gemini_Generated_Image_pxyvvnpxyvvnpxyv.jpg',
+  'Gemini_Generated_Image_spv3l3spv3l3spv3.jpg',
+  'Gemini_Generated_Image_tjlf2qtjlf2qtjlf.jpg',
+  'Gemini_Generated_Image_tns692tns692tns6.jpg',
+  'Gemini_Generated_Image_wc3rhywc3rhywc3r.jpg',
+  'Gemini_Generated_Image_wxb7f4wxb7f4wxb7.jpg',
+  'Gemini_Generated_Image_xzup1sxzup1sxzup.jpg'
+];
+
 const agencyWhatsApp = createWhatsAppUrl(
   'Hola Charlitron, vi su página de Agencia BTL y quiero información sobre activaciones y servicios para mi marca.'
 );
@@ -157,6 +175,49 @@ export const AgencyPage: React.FC<AgencyPageProps> = ({ onBack }) => (
                 <Icon className="mt-1 h-5 w-5 text-amber-400" aria-hidden="true" />
               </article>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-zinc-800/80 px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-amber-400">Catálogo visual</p>
+              <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">Ideas para llevar tu marca más lejos.</h2>
+            </div>
+            <p className="max-w-md text-sm leading-6 text-zinc-400">
+              Elige la imagen que te interesa y cuéntanos qué tienes en mente.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+            {agencyGallery.map((image, imageIndex) => {
+              const imageNumber = String(imageIndex + 1).padStart(2, '0');
+              const imageWhatsApp = createWhatsAppUrl(
+                `Hola Charlitron, me interesa este servicio. Vi la imagen ${imageNumber} del catálogo de Agencia.`
+              );
+
+              return (
+                <article key={image} className="overflow-hidden border border-zinc-800 bg-[#101013]">
+                  <img
+                    src={`/${image}`}
+                    alt={`Imagen ${imageNumber} del catálogo de servicios Charlitron Agencia`}
+                    loading="lazy"
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                  <a
+                    href={imageWhatsApp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex min-h-12 items-center justify-center gap-2 px-2 py-3 text-center text-xs font-semibold text-zinc-100 transition-colors hover:bg-amber-400 hover:text-zinc-950 sm:text-sm"
+                  >
+                    <MessageCircle className="h-4 w-4 shrink-0 text-amber-400 group-hover:text-zinc-950" />
+                    <span>Me interesa este servicio</span>
+                  </a>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
