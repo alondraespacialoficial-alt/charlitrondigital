@@ -39,13 +39,13 @@ export const WhatWeDo: React.FC = () => {
       <div className="relative z-10 max-w-7xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <span className="text-amber-400 font-semibold tracking-wider text-xs uppercase px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 backdrop-blur-sm shadow-sm">
-            Qué hacemos
+            Lo que hacemos
           </span>
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white mt-3 mb-4 tracking-tight drop-shadow-md">
-            Soluciones digitales concretas
+            Más que tecnología: una ventaja competitiva.
           </h2>
           <p className="text-zinc-300 text-base sm:text-lg leading-relaxed drop-shadow-sm">
-            Sin conceptos abstractos ni rodeos. Herramientas diseñadas para resolver fricciones reales de tu día a día.
+            Eliminamos fricción, automatizamos procesos y convertimos la operación diaria en una máquina más clara, rápida y rentable.
           </p>
         </div>
 

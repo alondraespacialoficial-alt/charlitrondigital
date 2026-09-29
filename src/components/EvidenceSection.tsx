@@ -13,14 +13,14 @@ export const EvidenceSection: React.FC = () => {
       {/* Section Heading */}
       <div className="text-center max-w-3xl mx-auto mb-16">
         <span className="text-amber-400 font-semibold tracking-wider text-xs uppercase px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20">
-          Casos reales y probados
+          Resultados reales
         </span>
         <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-white mt-3 mb-4 tracking-tight">
-          No solo hablamos de tecnología. <br className="hidden sm:inline" />
-          <span className="text-amber-400">La construimos.</span>
+          No solo entregamos trabajo. <br className="hidden sm:inline" />
+          <span className="text-amber-400">Generamos impacto real.</span>
         </h2>
         <p className="text-zinc-400 text-base sm:text-lg">
-          Herramientas vivas y operativas desarrolladas a la medida, sin código genérico ni plantillas rígidas.
+          Soluciones vivas, operativas y pensadas para negocios que quieren más orden, más ventas y menos fricción en cada proceso.
         </p>
       </div>
 

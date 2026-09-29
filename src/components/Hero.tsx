@@ -116,7 +116,7 @@ export const Hero: React.FC = () => {
               CHARLITRON DIGITAL
             </span>
             <span className="text-zinc-500">•</span>
-            <span className="text-zinc-300">El brazo tecnológico de Charlitron</span>
+            <span className="text-zinc-300">Agencia digital + tecnología para crecer</span>
           </div>
         </motion.div>
 
@@ -141,9 +141,9 @@ export const Hero: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="font-display font-black text-4xl sm:text-6xl lg:text-7xl tracking-tight text-white mb-6 leading-[1.08] drop-shadow-[0_4px_28px_rgba(0,0,0,0.9)]"
         >
-          Soluciones digitales{' '}
+          Tecnología que{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-500 drop-shadow-[0_2px_20px_rgba(250,204,21,0.3)]">
-            para negocios.
+            mueve negocio.
           </span>
         </motion.h1>
 
@@ -154,7 +154,7 @@ export const Hero: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="text-lg sm:text-2xl text-zinc-200 font-normal max-w-2xl mx-auto mb-10 leading-relaxed drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)]"
         >
-          Webs, apps, automatizaciones e IA para simplificar procesos, vender mejor y ahorrar tiempo.
+          Webs, apps, automatizaciones e IA para eliminar fricción, vender más y hacer que tu operación funcione mejor cada día.
         </motion.p>
 
         {/* Main Action Buttons */}
@@ -168,7 +168,7 @@ export const Hero: React.FC = () => {
             onClick={() => handleScrollTo('necesidades')}
             className="amber-button w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-7 py-4 rounded-xl text-zinc-950 font-bold text-sm sm:text-base hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer transform hover:-translate-y-0.5"
           >
-            <span>Cuéntanos qué necesitas</span>
+            <span>Hablemos de tu proyecto</span>
             <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
@@ -176,7 +176,7 @@ export const Hero: React.FC = () => {
             onClick={() => handleScrollTo('soluciones')}
             className="dark-button w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-4 rounded-xl text-zinc-100 border border-zinc-700 hover:border-amber-400/50 hover:bg-zinc-800/90 active:scale-[0.98] transition-all text-sm sm:text-base font-semibold cursor-pointer"
           >
-            <span>Ver lo que hacemos</span>
+            <span>Ver soluciones</span>
           </button>
         </motion.div>
 
