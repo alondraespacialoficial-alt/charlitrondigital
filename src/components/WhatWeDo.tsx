@@ -54,11 +54,11 @@ export const WhatWeDo: React.FC = () => {
           {SERVICES_LIST.map((service) => (
             <div
               key={service.id}
-              className="group relative flex flex-col justify-between p-6 sm:p-7 rounded-2xl bg-[#0f0f14]/85 backdrop-blur-md border border-zinc-800/90 hover:border-amber-400/60 hover:bg-[#14141b]/95 transition-all duration-300 shadow-xl hover:shadow-[0_12px_35px_rgba(0,0,0,0.6)]"
+              className="tech-panel group relative flex flex-col justify-between p-6 sm:p-7 rounded-2xl bg-[#0f0f14]/85 backdrop-blur-md border border-zinc-800/90 hover:border-amber-400/60 hover:bg-[#14141b]/95 transition-all duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.38)] hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(250,204,21,0.12)]"
             >
               <div>
                 {/* Header Icon with geometric frame */}
-                <div className="w-13 h-13 rounded-xl bg-zinc-900/90 backdrop-blur-sm border border-zinc-700/80 flex items-center justify-center mb-5 group-hover:border-amber-400/40 group-hover:scale-105 transition-all">
+                <div className="w-13 h-13 rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-800 backdrop-blur-sm border border-zinc-700/80 flex items-center justify-center mb-5 group-hover:border-amber-400/40 group-hover:scale-105 transition-all">
                   {getIcon(service.iconName)}
                 </div>
 

@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLegal }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-[#09090b]/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-[#09090b]/85 backdrop-blur-xl shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
           {/* Logo anchor */}
           <a

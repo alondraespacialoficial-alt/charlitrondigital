@@ -62,7 +62,7 @@ export const ContactSection: React.FC = () => {
       </div>
 
       {/* Main WhatsApp Primary Card */}
-      <div className="relative rounded-3xl bg-gradient-to-b from-[#14141a] to-[#0c0c10] border border-amber-400/30 p-8 sm:p-10 text-center mb-12 shadow-[0_0_50px_rgba(250,204,21,0.08)]">
+      <div className="premium-shell relative rounded-3xl border border-amber-400/30 p-8 sm:p-10 text-center mb-12 glow-ring">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-400 text-zinc-950 mb-5 shadow-[0_0_30px_rgba(250,204,21,0.35)]">
           <MessageCircle className="w-8 h-8 fill-current" />
         </div>
@@ -79,7 +79,7 @@ export const ContactSection: React.FC = () => {
             href={mainWhatsAppUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-amber-400 text-zinc-950 font-bold text-base hover:bg-amber-300 active:scale-[0.98] transition-all shadow-[0_0_25px_rgba(250,204,21,0.25)]"
+            className="amber-button w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-zinc-950 font-bold text-base hover:brightness-105 active:scale-[0.98] transition-all"
           >
             <MessageCircle className="w-5 h-5 fill-current" />
             <span>Hablar por WhatsApp</span>
@@ -87,7 +87,7 @@ export const ContactSection: React.FC = () => {
 
           <a
             href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Consulta - Charlitron Digital')}`}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 hover:border-amber-400/60 hover:text-white text-sm font-semibold transition-all"
+            className="dark-button w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-zinc-200 border border-zinc-700 hover:border-amber-400/60 hover:text-white text-sm font-semibold transition-all"
           >
             <Mail className="w-4 h-4 text-amber-400" />
             <span>Escribir por Correo</span>

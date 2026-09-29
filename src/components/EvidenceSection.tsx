@@ -29,7 +29,7 @@ export const EvidenceSection: React.FC = () => {
         {SHOWCASE_PROJECTS.slice(0, 2).map((project) => (
           <div
             key={project.id}
-            className="group relative flex flex-col justify-between rounded-2xl bg-[#111116] border border-zinc-800 hover:border-amber-400/70 transition-all duration-300 p-6 sm:p-7 shadow-lg"
+            className="tech-panel group relative flex flex-col justify-between rounded-2xl bg-[#111116] border border-zinc-800 hover:border-amber-400/70 transition-all duration-300 p-6 sm:p-7 shadow-[0_18px_44px_rgba(0,0,0,0.32)] hover:-translate-y-1"
           >
             <div>
               {/* Header Badges */}

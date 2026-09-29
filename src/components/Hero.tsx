@@ -127,7 +127,9 @@ export const Hero: React.FC = () => {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mb-8 relative"
         >
-          <CharlitronLogo size="hero" showText={false} />
+          <div className="rounded-full border border-amber-400/20 bg-zinc-950/40 p-4 shadow-[0_0_80px_rgba(250,204,21,0.12)] backdrop-blur-sm">
+            <CharlitronLogo size="hero" showText={false} />
+          </div>
           {/* Subtle tech aura behind logo */}
           <div className="absolute -inset-4 bg-amber-400/10 blur-xl -z-10 rounded-full" />
         </motion.div>
@@ -164,7 +166,7 @@ export const Hero: React.FC = () => {
         >
           <button
             onClick={() => handleScrollTo('necesidades')}
-            className="inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl bg-amber-400 text-zinc-950 font-bold text-base hover:bg-amber-300 active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(250,204,21,0.25)] cursor-pointer"
+            className="amber-button inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl text-zinc-950 font-bold text-base hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer transform hover:-translate-y-0.5"
           >
             <span>Cuéntanos qué necesitas</span>
             <ArrowRight className="w-5 h-5" />
@@ -172,7 +174,7 @@ export const Hero: React.FC = () => {
 
           <button
             onClick={() => handleScrollTo('soluciones')}
-            className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-zinc-900/90 text-zinc-100 border border-zinc-700 hover:border-amber-400/50 hover:bg-zinc-800/90 active:scale-[0.98] transition-all text-base font-semibold cursor-pointer"
+            className="dark-button inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl text-zinc-100 border border-zinc-700 hover:border-amber-400/50 hover:bg-zinc-800/90 active:scale-[0.98] transition-all text-base font-semibold cursor-pointer"
           >
             <span>Ver lo que hacemos</span>
           </button>
