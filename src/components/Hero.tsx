@@ -162,22 +162,43 @@ export const Hero: React.FC = () => {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 mb-8"
+          className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-7"
         >
           <button
             onClick={() => handleScrollTo('necesidades')}
-            className="amber-button inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl text-zinc-950 font-bold text-base hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer transform hover:-translate-y-0.5"
+            className="amber-button w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-7 py-4 rounded-xl text-zinc-950 font-bold text-sm sm:text-base hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer transform hover:-translate-y-0.5"
           >
             <span>Cuéntanos qué necesitas</span>
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <button
             onClick={() => handleScrollTo('soluciones')}
-            className="dark-button inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl text-zinc-100 border border-zinc-700 hover:border-amber-400/50 hover:bg-zinc-800/90 active:scale-[0.98] transition-all text-base font-semibold cursor-pointer"
+            className="dark-button w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-4 rounded-xl text-zinc-100 border border-zinc-700 hover:border-amber-400/50 hover:bg-zinc-800/90 active:scale-[0.98] transition-all text-sm sm:text-base font-semibold cursor-pointer"
           >
             <span>Ver lo que hacemos</span>
           </button>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.45 }}
+          className="grid w-full max-w-2xl grid-cols-3 gap-2 sm:gap-3 mb-8"
+        >
+          {[
+            { label: '10+ años', value: 'experiencia' },
+            { label: 'Web • Apps', value: 'digital' },
+            { label: 'Atención', value: 'directa' }
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-xl border border-zinc-800/80 bg-zinc-950/60 px-2 py-2.5 text-center backdrop-blur-sm"
+            >
+              <div className="text-[11px] sm:text-sm font-bold text-amber-400">{item.label}</div>
+              <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-zinc-500">{item.value}</div>
+            </div>
+          ))}
         </motion.div>
 
         {/* WhatsApp Direct Access Banner */}
