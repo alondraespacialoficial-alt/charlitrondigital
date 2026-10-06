@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { WhatWeDo } from './components/WhatWeDo';
@@ -12,10 +12,47 @@ import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { LegalPage, LegalTab } from './components/LegalPage';
 import { CookieConsent } from './components/CookieConsent';
 import { AgencyPage } from './components/AgencyPage';
+import { CotizadorInterno } from './features/cotizador/CotizadorInterno';
 
 export default function App() {
   const [legalTab, setLegalTab] = useState<LegalTab | null>(null);
   const [agencyPage, setAgencyPage] = useState(false);
+  const [cotizadorOpen, setCotizadorOpen] = useState(false);
+  const logoClickCount = useRef(0);
+  const logoClickTimeout = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleLogoClickSequence = (event: MouseEvent) => {
+      const target = event.target;
+      const clickedLogo = target instanceof Element && target.closest('[data-cotizador-logo-trigger]');
+      if (clickedLogo) {
+        if (logoClickTimeout.current !== null) window.clearTimeout(logoClickTimeout.current);
+        logoClickCount.current += 1;
+        if (logoClickCount.current === 5) {
+          logoClickCount.current = 0;
+          setCotizadorOpen(true);
+          return;
+        }
+        logoClickTimeout.current = window.setTimeout(() => {
+          logoClickCount.current = 0;
+          logoClickTimeout.current = null;
+        }, 2000);
+        return;
+      }
+
+      logoClickCount.current = 0;
+      if (logoClickTimeout.current !== null) {
+        window.clearTimeout(logoClickTimeout.current);
+        logoClickTimeout.current = null;
+      }
+    };
+
+    document.addEventListener('click', handleLogoClickSequence, true);
+    return () => {
+      document.removeEventListener('click', handleLogoClickSequence, true);
+      if (logoClickTimeout.current !== null) window.clearTimeout(logoClickTimeout.current);
+    };
+  }, []);
 
   // Sync with window hash for direct linking / back navigation
   useEffect(() => {
@@ -63,6 +100,10 @@ export default function App() {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (cotizadorOpen) {
+    return <CotizadorInterno onClose={() => setCotizadorOpen(false)} />;
+  }
 
   if (agencyPage) {
     return (

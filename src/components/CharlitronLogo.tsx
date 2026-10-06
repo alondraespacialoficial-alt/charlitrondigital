@@ -31,7 +31,7 @@ export const CharlitronLogo: React.FC<LogoProps> = ({
   if (!imgError) {
     if (isIconOnly) {
       return (
-        <div className={`inline-flex items-center justify-center ${className}`}>
+        <div data-cotizador-logo-trigger className={`inline-flex items-center justify-center ${className}`}>
           <img
             src="/charlitron-icon.png"
             alt="Charlitron Digital Icon"
@@ -44,7 +44,7 @@ export const CharlitronLogo: React.FC<LogoProps> = ({
     }
 
     return (
-      <div className={`inline-flex items-center gap-3 ${className}`}>
+      <div data-cotizador-logo-trigger className={`inline-flex items-center gap-3 ${className}`}>
         <div className="flex flex-col text-left">
           <img
             src="/charlitron-logo.png"
@@ -72,7 +72,7 @@ export const CharlitronLogo: React.FC<LogoProps> = ({
   }[size];
 
   return (
-    <div className={`inline-flex items-center gap-3 ${className}`}>
+    <div data-cotizador-logo-trigger className={`inline-flex items-center gap-3 ${className}`}>
       <div className={`relative ${iconDimensions} flex items-center justify-center shrink-0`}>
         <svg
           viewBox="0 0 100 100"
