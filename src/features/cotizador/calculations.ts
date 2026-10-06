@@ -45,6 +45,13 @@ export function formatCurrency(cents: number): string {
   }).format(cents / 100);
 }
 
+export function formatUnitLabel(unit: string): string {
+  return unit
+    .trim()
+    .toLocaleLowerCase('es-MX')
+    .replace(/(^|\s)\p{L}/gu, (letter) => letter.toLocaleUpperCase('es-MX'));
+}
+
 export function amountToCents(value: string): number {
   return decimalToUnits(value, 2);
 }

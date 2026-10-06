@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FileDown, Plus, Trash2, X } from 'lucide-react';
 import { CharlitronLogo } from '../../components/CharlitronLogo';
-import { calculateQuote, formatCurrency } from './calculations';
+import { calculateQuote, formatCurrency, formatUnitLabel } from './calculations';
 import type { QuoteConceptDraft, QuoteDraft } from './types';
 
 interface CotizadorInternoProps {
@@ -36,7 +36,7 @@ function createInitialQuote(): QuoteDraft {
     phone: '',
     address: '',
     email: '',
-    concepts: [{ id: crypto.randomUUID(), code: '', description: '', quantity: '1', unit: 'servicio', unitPrice: '' }],
+    concepts: [{ id: crypto.randomUUID(), code: '', description: '', quantity: '1', unit: 'Servicio', unitPrice: '' }],
     discountMode: 'amount',
     discountValue: '',
     ivaEnabled: false,
@@ -73,7 +73,7 @@ export const CotizadorInterno: React.FC<CotizadorInternoProps> = ({ onClose }) =
     setQuote((current) => ({
       ...current,
       concepts: [...current.concepts, {
-        id: crypto.randomUUID(), code: '', description: '', quantity: '1', unit: 'servicio', unitPrice: '',
+        id: crypto.randomUUID(), code: '', description: '', quantity: '1', unit: 'Servicio', unitPrice: '',
       }],
     }));
   };
@@ -169,7 +169,7 @@ export const CotizadorInterno: React.FC<CotizadorInternoProps> = ({ onClose }) =
                       <label className={`${labelClass} sm:col-span-1`}>Código<input className={inputClass} value={concept.code} onChange={(e) => updateConcept(concept.id, 'code', e.target.value)} required maxLength={30} /></label>
                       <label className={`${labelClass} sm:col-span-3`}>Descripción<input className={inputClass} value={concept.description} onChange={(e) => updateConcept(concept.id, 'description', e.target.value)} required maxLength={220} /></label>
                       <label className={`${labelClass} sm:col-span-1`}>Cantidad<input className={inputClass} type="number" min="0.001" step="0.001" value={concept.quantity} onChange={(e) => updateConcept(concept.id, 'quantity', e.target.value)} required /></label>
-                      <label className={`${labelClass} sm:col-span-1`}>Unidad<input className={inputClass} value={concept.unit} onChange={(e) => updateConcept(concept.id, 'unit', e.target.value)} required maxLength={24} /></label>
+                      <label className={`${labelClass} sm:col-span-1`}>Unidad<input className={inputClass} value={concept.unit} onChange={(e) => updateConcept(concept.id, 'unit', e.target.value)} onBlur={() => updateConcept(concept.id, 'unit', formatUnitLabel(concept.unit))} required maxLength={24} /></label>
                       <label className={`${labelClass} sm:col-span-2`}>Precio unitario (MXN)<input className={inputClass} type="number" min="0" step="0.01" inputMode="decimal" value={concept.unitPrice} onChange={(e) => updateConcept(concept.id, 'unitPrice', e.target.value)} required /></label>
                       <div className="sm:col-span-2"><p className={labelClass}>Total del concepto</p><p className="mt-3 font-mono text-sm text-zinc-200">{formatCurrency(totals.lineTotalsCents[index] ?? 0)}</p></div>
                     </div>
@@ -205,9 +205,9 @@ export const CotizadorInterno: React.FC<CotizadorInternoProps> = ({ onClose }) =
             <h2 className="text-sm font-bold text-white">Resumen</h2>
             <div className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between gap-4 text-zinc-400"><span>Subtotal</span><span className="font-mono text-zinc-200">{formatCurrency(totals.subtotalCents)}</span></div>
-              <div className="flex justify-between gap-4 text-zinc-400"><span>Descuento</span><span className="font-mono text-zinc-200">-{formatCurrency(totals.discountCents)}</span></div>
+              <div className="flex justify-between gap-4 text-zinc-400"><span>Descuento</span><span className="font-mono text-zinc-200">{totals.discountCents > 0 ? `-${formatCurrency(totals.discountCents)}` : formatCurrency(0)}</span></div>
               {quote.ivaEnabled && <div className="flex justify-between gap-4 text-zinc-400"><span>IVA (16%)</span><span className="font-mono text-zinc-200">{formatCurrency(totals.ivaCents)}</span></div>}
-              <div className="flex justify-between gap-4 border-t border-amber-400/50 pt-4 text-base font-bold text-white"><span>Total</span><span className="font-mono text-amber-300">{formatCurrency(totals.totalCents)}</span></div>
+              <div className="flex justify-between gap-4 border-t border-amber-400/50 pt-4 text-lg font-bold text-white"><span>Total</span><span className="font-mono text-xl text-amber-300">{formatCurrency(totals.totalCents)}</span></div>
             </div>
             {pdfError && <p role="alert" className="mt-5 text-sm text-red-400">{pdfError}</p>}
             <button type="submit" disabled={isGenerating} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-amber-400 px-4 py-3 text-sm font-bold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-wait disabled:opacity-60">

@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { amountToCents, formatCurrency } from './calculations';
+import { amountToCents, formatCurrency, formatUnitLabel } from './calculations';
 import type { QuoteDraft, QuoteTotals } from './types';
 
 const PAGE_WIDTH = 210;
@@ -28,25 +28,35 @@ function formatDate(value: string): string {
 export async function downloadQuotePdf(quote: QuoteDraft, totals: QuoteTotals): Promise<void> {
   const logo = await loadBrandLogo();
   const document = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const logoHeight = 15;
+  const logoHeight = 21;
   const logoWidth = (logo.naturalWidth / logo.naturalHeight) * logoHeight;
-  let cursorY = 34;
+  let cursorY = 52;
 
   const drawPageHeader = () => {
-    document.addImage(logo, 'PNG', MARGIN, 11, logoWidth, logoHeight);
+    document.setFillColor(9, 9, 11);
+    document.rect(0, 0, PAGE_WIDTH, 47, 'F');
+    document.addImage(logo, 'PNG', MARGIN, 8, logoWidth, logoHeight);
     document.setFont('helvetica', 'bold');
-    document.setFontSize(18);
-    document.setTextColor(...INK);
-    document.text('COTIZACIÓN', PAGE_WIDTH - MARGIN, 19, { align: 'right' });
+    document.setFontSize(17);
+    document.setTextColor(255, 255, 255);
+    document.text('COTIZACIÓN', PAGE_WIDTH - MARGIN, 16, { align: 'right' });
+    document.setFont('helvetica', 'normal');
+    document.setFontSize(7.5);
+    document.setTextColor(212, 212, 216);
+    document.text('WhatsApp: 4444 23 7092', MARGIN, 33);
+    document.text('integrandotugente@hotmail.com', MARGIN, 37);
+    document.setFontSize(7);
+    document.setTextColor(...AMBER);
+    document.text('El brazo tecnológico de Charlitron', MARGIN, 41);
     document.setDrawColor(...AMBER);
     document.setLineWidth(0.8);
-    document.line(MARGIN, 29, PAGE_WIDTH - MARGIN, 29);
+    document.line(MARGIN, 46, PAGE_WIDTH - MARGIN, 46);
   };
 
   const addPage = () => {
     document.addPage();
     drawPageHeader();
-    cursorY = 36;
+    cursorY = 52;
   };
 
   const ensureSpace = (height: number) => {
@@ -77,7 +87,10 @@ export async function downloadQuotePdf(quote: QuoteDraft, totals: QuoteTotals): 
   document.text(`Folio: ${quote.folio}`, MARGIN, cursorY);
   document.setFont('helvetica', 'normal');
   document.text(`Fecha: ${formatDate(quote.date)}`, PAGE_WIDTH - MARGIN, cursorY, { align: 'right' });
-  cursorY += 9;
+  cursorY += 6;
+  document.setFontSize(8);
+  document.text('Vigencia: 7 días naturales', MARGIN, cursorY);
+  cursorY += 7;
 
   document.setFont('helvetica', 'bold');
   document.setFontSize(8.5);
@@ -134,7 +147,7 @@ export async function downloadQuotePdf(quote: QuoteDraft, totals: QuoteTotals): 
       concept.code,
       descriptionLines,
       concept.quantity,
-      concept.unit,
+      formatUnitLabel(concept.unit),
       formatCurrency(amountToCents(concept.unitPrice)),
       formatCurrency(totals.lineTotalsCents[index] ?? 0),
     ];
@@ -170,32 +183,41 @@ export async function downloadQuotePdf(quote: QuoteDraft, totals: QuoteTotals): 
     quote.discountMode === 'percentage'
       ? `Descuento (${quote.discountValue || '0'}%)`
       : 'Descuento',
-    `-${formatCurrency(totals.discountCents)}`,
+    totals.discountCents > 0 ? `-${formatCurrency(totals.discountCents)}` : formatCurrency(0),
   );
   if (quote.ivaEnabled) drawTotal('IVA (16%)', formatCurrency(totals.ivaCents));
-  document.setDrawColor(...AMBER);
-  document.setLineWidth(0.5);
-  document.line(totalsX, cursorY - 2, PAGE_WIDTH - MARGIN, cursorY - 2);
-  drawTotal('TOTAL', formatCurrency(totals.totalCents), true);
+  cursorY += 3;
+  ensureSpace(18);
+  const totalTop = cursorY;
+  document.setFillColor(255, 247, 224);
+  document.roundedRect(totalsX - 3, totalTop, PAGE_WIDTH - MARGIN - totalsX + 3, 15, 1.5, 1.5, 'F');
+  document.setFont('helvetica', 'bold');
+  document.setFontSize(11.5);
+  document.setTextColor(...INK);
+  document.text('TOTAL', totalsX, totalTop + 9.5);
+  document.setFontSize(12.5);
+  document.setTextColor(...AMBER);
+  document.text(formatCurrency(totals.totalCents), PAGE_WIDTH - MARGIN, totalTop + 9.5, { align: 'right' });
+  cursorY += 20;
 
-  if (quote.observations.trim()) {
-    cursorY += 3;
-    ensureSpace(20);
-    document.setFont('helvetica', 'bold');
-    document.setFontSize(8.5);
-    document.setTextColor(...INK);
-    document.text('OBSERVACIONES', MARGIN, cursorY);
-    cursorY += 5;
-    document.setFont('helvetica', 'normal');
-    document.setFontSize(8);
-    document.setTextColor(...INK);
-    const observations = document.splitTextToSize(quote.observations, CONTENT_WIDTH);
-    observations.forEach((line: string) => {
-      ensureSpace(5);
-      document.text(line, MARGIN, cursorY);
-      cursorY += 4.5;
-    });
-  }
+  ensureSpace(24);
+  document.setFont('helvetica', 'bold');
+  document.setFontSize(8.5);
+  document.setTextColor(...INK);
+  document.text('OBSERVACIONES Y CONDICIONES', MARGIN, cursorY);
+  cursorY += 5;
+  document.setFont('helvetica', 'normal');
+  document.setFontSize(8);
+  document.setTextColor(...INK);
+  const closingNotes = [
+    quote.observations.trim() || 'Sin observaciones adicionales.',
+    'Vigencia de 7 días naturales a partir de la fecha de emisión. Precios expresados en MXN.',
+  ];
+  document.splitTextToSize(closingNotes.join('\n'), CONTENT_WIDTH).forEach((line: string) => {
+    ensureSpace(5);
+    document.text(line, MARGIN, cursorY);
+    cursorY += 4.5;
+  });
 
   document.save(`${quote.folio}.pdf`);
 }
