@@ -1,23 +1,24 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Archive, Eye } from 'lucide-react';
+import { Archive, Eye, Pencil, Plus } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabaseClient';
-import type { ArticleRow, CategoryRow } from '../../lib/database.types';
+import type { ArticleRow, ArticleStatus, CategoryRow } from '../../lib/database.types';
 import { ArticleEditor } from './ArticleEditor';
 import { logAdminAction } from './audit';
+import { ActionError, primaryButton, SectionHeader, StateBlock } from './ui';
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<ArticleStatus, string> = {
   draft: 'Borrador',
   review: 'Revisión',
   published: 'Publicado',
   archived: 'Archivado',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-zinc-700 text-zinc-200',
-  review: 'bg-sky-500/20 text-sky-300',
-  published: 'bg-emerald-500/20 text-emerald-300',
-  archived: 'bg-zinc-800 text-zinc-500',
+const STATUS_COLORS: Record<ArticleStatus, string> = {
+  draft: 'bg-zinc-800 text-zinc-300',
+  review: 'bg-sky-500/15 text-sky-300',
+  published: 'bg-emerald-500/15 text-emerald-300',
+  archived: 'bg-zinc-900 text-zinc-500',
 };
 
 type ListRow = Pick<
@@ -25,18 +26,32 @@ type ListRow = Pick<
   'id' | 'title' | 'slug' | 'status' | 'published_at' | 'updated_at' | 'category_id'
 > & { categories?: Pick<CategoryRow, 'name'> | null };
 
+type Filter = 'all' | ArticleStatus;
+const FILTERS: Array<{ id: Filter; label: string }> = [
+  { id: 'all', label: 'Todos' },
+  { id: 'draft', label: 'Borradores' },
+  { id: 'review', label: 'Revisión' },
+  { id: 'published', label: 'Publicados' },
+  { id: 'archived', label: 'Archivados' },
+];
+
 export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
   const [articles, setArticles] = useState<ListRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>('all');
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     const { data, error } = await supabase
       .from('articles')
       .select('id, title, slug, status, published_at, updated_at, category_id, categories(name)')
       .order('updated_at', { ascending: false });
-    if (!error) setArticles((data ?? []) as unknown as ListRow[]);
+    if (error) setLoadError(true);
+    else setArticles((data ?? []) as unknown as ListRow[]);
     setLoading(false);
   }, []);
 
@@ -44,19 +59,12 @@ export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
     void load();
   }, [load]);
 
-  // Sin hard-delete desde la UI: archivar preserva el artículo Y sus fuentes
-  // (article_sources tiene ON DELETE CASCADE: un delete destruiría las
-  // fuentes sin revisiones propias). El DELETE real queda reservado a
-  // intervención manual extraordinaria vía SQL (la policy sigue existiendo).
+  // Sin hard-delete: article_sources tiene ON DELETE CASCADE y la policy DELETE no existe.
   const handleArchive = async (article: ListRow) => {
-    if (!window.confirm(`¿Archivar "${article.title}"? Dejará de mostrarse públicamente.`))
-      return;
-    const { error } = await supabase
-      .from('articles')
-      .update({ status: 'archived' })
-      .eq('id', article.id);
+    if (!window.confirm(`¿Archivar "${article.title}"? Dejará de mostrarse públicamente.`)) return;
+    const { error } = await supabase.from('articles').update({ status: 'archived' }).eq('id', article.id);
     if (error) {
-      window.alert(`Error al archivar: ${error.message}`);
+      setActionError(`No se pudo archivar: ${error.message}`);
       return;
     }
     await logAdminAction(user, 'article.archive', 'article', article.id, { title: article.title });
@@ -76,90 +84,103 @@ export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
     );
   }
 
+  const visible = filter === 'all' ? articles : articles.filter((a) => a.status === filter);
+
   return (
     <section>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold">Artículos</h2>
-        <button
-          onClick={() => setEditingId('new')}
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Nuevo artículo
-        </button>
+      <SectionHeader
+        title="Artículos"
+        description="Borrador → revisión → publicado. Archivar reemplaza al borrado."
+        action={
+          <button onClick={() => setEditingId('new')} className={primaryButton}>
+            <Plus className="h-4 w-4" /> Nuevo artículo
+          </button>
+        }
+      />
+
+      <ActionError message={actionError} onDismiss={() => setActionError(null)} />
+
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              filter === f.id
+                ? 'bg-amber-400 text-zinc-950'
+                : 'border border-zinc-800 text-zinc-400 hover:text-white'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
-      {loading ? (
-        <p className="text-zinc-500">Cargando…</p>
-      ) : articles.length === 0 ? (
-        <p className="text-zinc-500">Sin artículos todavía. Crea el primero.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-800">
-          <table className="w-full text-sm">
-            <thead className="bg-zinc-900/60 text-zinc-400 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">Título</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium hidden md:table-cell">Categoría</th>
-                <th className="px-4 py-3 font-medium hidden md:table-cell">Actualizado</th>
-                <th className="px-4 py-3 font-medium text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800">
-              {articles.map((article) => (
-                <tr key={article.id} className="hover:bg-zinc-900/40">
-                  <td className="px-4 py-3">
-                    <span className="font-medium text-white">{article.title}</span>
-                    <span className="block text-xs text-zinc-500">/blog/{article.slug}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[article.status]}`}
-                    >
-                      {STATUS_LABELS[article.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-zinc-400">
-                    {article.categories?.name ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-zinc-500">
-                    {new Date(article.updated_at).toLocaleDateString('es-MX')}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="inline-flex items-center gap-1">
-                      {article.status === 'published' && (
-                        <a
-                          href={`/blog/${article.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
-                          title="Ver público"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </a>
-                      )}
-                      <button
-                        onClick={() => setEditingId(article.id)}
-                        className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
-                        title="Editar"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      {article.status !== 'archived' && (
-                        <button
-                          onClick={() => handleArchive(article)}
-                          className="p-2 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-zinc-800"
-                          title="Archivar (sin borrado destructivo)"
-                        >
-                          <Archive className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {loading && <StateBlock kind="loading" message="Cargando artículos…" />}
+      {!loading && loadError && (
+        <StateBlock kind="error" message="No se pudieron cargar los artículos." onRetry={load} />
+      )}
+      {!loading && !loadError && visible.length === 0 && (
+        <StateBlock
+          kind="empty"
+          message={articles.length === 0 ? 'Sin artículos todavía. Crea el primero.' : 'Ningún artículo en este estado.'}
+        />
+      )}
+
+      {!loading && !loadError && visible.length > 0 && (
+        <ul className="divide-y divide-zinc-800/80 rounded-xl border border-zinc-800 bg-zinc-950">
+          {visible.map((article) => (
+            <li key={article.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-white">{article.title}</p>
+                <p className="truncate font-mono text-xs text-zinc-600">
+                  /blog/{article.slug}
+                  {article.categories?.name ? ` · ${article.categories.name}` : ''}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[article.status]}`}
+              >
+                {STATUS_LABELS[article.status]}
+              </span>
+              <span className="hidden text-xs text-zinc-600 md:inline">
+                {new Date(article.updated_at).toLocaleDateString('es-MX')}
+              </span>
+              <div className="flex items-center">
+                {article.status === 'published' && (
+                  <a
+                    href={`/blog/${article.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-900 hover:text-white"
+                    title="Ver público"
+                    aria-label="Ver público"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </a>
+                )}
+                <button
+                  onClick={() => setEditingId(article.id)}
+                  className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-900 hover:text-white"
+                  title="Editar"
+                  aria-label="Editar"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                {article.status !== 'archived' && (
+                  <button
+                    onClick={() => handleArchive(article)}
+                    className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-900 hover:text-amber-400"
+                    title="Archivar"
+                    aria-label="Archivar"
+                  >
+                    <Archive className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

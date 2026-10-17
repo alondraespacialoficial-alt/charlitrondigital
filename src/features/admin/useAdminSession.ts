@@ -1,43 +1,47 @@
-// Hook de sesión del admin: Supabase Auth + verificación de rol vía admin_users.
-import { useEffect, useState } from 'react';
+// Sesión del admin: Supabase Auth + verificación de rol vía admin_users (RLS: solo su propia fila).
+import { useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabaseClient';
 
-export interface AdminSession {
-  user: User;
-  isAdmin: boolean;
-}
+export type AdminState =
+  | { status: 'loading' }
+  | { status: 'anonymous' }
+  | { status: 'admin'; user: User }
+  | { status: 'denied'; user: User }
+  | { status: 'error'; user: User; message: string };
 
-export function useAdminSession() {
-  const [session, setSession] = useState<AdminSession | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useAdminSession(): AdminState {
+  const [state, setState] = useState<AdminState>({ status: 'loading' });
+  const requestId = useRef(0);
 
   useEffect(() => {
     let mounted = true;
 
     const resolve = async (user: User | null) => {
-      if (!mounted) return;
+      const current = ++requestId.current;
       if (!user) {
-        setSession(null);
-        setLoading(false);
+        if (mounted) setState({ status: 'anonymous' });
         return;
       }
-      // Verifica rol admin (RLS: solo puede leer su propia fila).
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('admin_users')
         .select('user_id')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (!mounted) return;
-      setSession({ user, isAdmin: Boolean(data) });
-      setLoading(false);
+      if (!mounted || current !== requestId.current) return;
+      if (error) {
+        setState({ status: 'error', user, message: 'No se pudo verificar tu acceso. Intenta de nuevo.' });
+        return;
+      }
+      setState(data ? { status: 'admin', user } : { status: 'denied', user });
     };
 
-    supabase.auth.getUser().then(({ data }) => resolve(data.user));
+    // setTimeout evita consultar Supabase dentro del callback de auth (riesgo de bloqueo interno).
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, authSession) => {
-      resolve(authSession?.user ?? null);
+      const user = authSession?.user ?? null;
+      setTimeout(() => void resolve(user), 0);
     });
 
     return () => {
@@ -46,5 +50,5 @@ export function useAdminSession() {
     };
   }, []);
 
-  return { session, loading };
+  return state;
 }

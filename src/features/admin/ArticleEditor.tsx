@@ -11,6 +11,7 @@ import type {
 } from '../../lib/database.types';
 import { uploadCover } from './images';
 import { logAdminAction } from './audit';
+import { ActionError, inputClass as baseInputClass, primaryButton, SectionHeader, StateBlock } from './ui';
 
 function slugify(text: string): string {
   return text
@@ -21,9 +22,11 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-const inputClass =
-  'mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-white focus:border-amber-400 focus:outline-none';
+const inputClass = `${baseInputClass} mt-1.5`;
 const labelClass = 'block text-sm text-zinc-400';
+const cardClass = 'space-y-4 rounded-xl border border-zinc-800/80 bg-zinc-950/50 p-5';
+const secondaryButton =
+  'inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white disabled:opacity-50 transition-colors';
 
 interface SourceDraft {
   id?: string;
@@ -45,6 +48,8 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [slugEdited, setSlugEdited] = useState(Boolean(articleId));
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -83,8 +88,8 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
         .eq('id', articleId)
         .single();
       if (error || !data) {
-        window.alert('No se pudo cargar el artículo');
-        onClose();
+        setLoadError('No se pudo cargar el artículo.');
+        setLoading(false);
         return;
       }
       const article = data as unknown as ArticleRow;
@@ -121,7 +126,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
       setLoading(false);
     };
     void load();
-  }, [articleId, onClose]);
+  }, [articleId]);
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
@@ -131,6 +136,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setActionError(null);
     setUploading(true);
     try {
       // Para artículos nuevos usamos un id temporal de carpeta.
@@ -139,7 +145,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
       setCoverImageUrl(webUrl);
       setCoverThumbUrl(thumbUrl);
     } catch (err) {
-      window.alert(`Error al subir imagen: ${err instanceof Error ? err.message : 'desconocido'}`);
+      setActionError(`Error al subir imagen: ${err instanceof Error ? err.message : 'desconocido'}`);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -149,9 +155,10 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
   const handleSave = async (nextStatus?: ArticleStatus) => {
     const finalStatus = nextStatus ?? status;
     if (!title.trim() || !slug.trim()) {
-      window.alert('Título y slug son obligatorios.');
+      setActionError('Título y slug son obligatorios.');
       return;
     }
+    setActionError(null);
     setSaving(true);
 
     const payload = {
@@ -179,7 +186,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
     if (articleId) {
       const { error } = await supabase.from('articles').update(payload).eq('id', articleId);
       if (error) {
-        window.alert(`Error al guardar: ${error.message}`);
+        setActionError(`Error al guardar: ${error.message}`);
         setSaving(false);
         return;
       }
@@ -190,7 +197,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
         .select('id')
         .single();
       if (error || !data) {
-        window.alert(`Error al crear: ${error?.message ?? 'desconocido'}`);
+        setActionError(`Error al crear: ${error?.message ?? 'desconocido'}`);
         setSaving(false);
         return;
       }
@@ -229,16 +236,31 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
     onClose();
   };
 
-  if (loading) return <p className="text-zinc-500">Cargando artículo…</p>;
+  if (loading) return <StateBlock kind="loading" message="Cargando artículo…" />;
+
+  const backButton = (
+    <button onClick={onClose} className={secondaryButton}>
+      <ArrowLeft className="h-4 w-4" /> Volver a la lista
+    </button>
+  );
+
+  if (loadError) {
+    return (
+      <section>
+        <SectionHeader title="Artículo" action={backButton} />
+        <StateBlock kind="error" message={loadError} />
+      </section>
+    );
+  }
 
   return (
     <section className="max-w-3xl">
-      <button
-        onClick={onClose}
-        className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white mb-6"
-      >
-        <ArrowLeft className="w-4 h-4" /> Volver a la lista
-      </button>
+      <SectionHeader
+        title={articleId ? 'Editar artículo' : 'Nuevo artículo'}
+        description={articleId ? slug : undefined}
+        action={backButton}
+      />
+      <ActionError message={actionError} onDismiss={() => setActionError(null)} />
 
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -318,10 +340,10 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
           />
         </label>
 
-        <div className="rounded-xl border border-zinc-800 p-5 space-y-4">
+        <div className={cardClass}>
           <h3 className="font-semibold text-white">Imagen de portada</h3>
           <div className="flex items-center gap-4">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:border-amber-400 hover:text-white transition-colors">
+            <label className={`${secondaryButton} cursor-pointer`}>
               <ImagePlus className="w-4 h-4" />
               {uploading ? 'Optimizando y subiendo…' : 'Subir imagen (se convierte a WebP)'}
               <input
@@ -346,7 +368,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
           </label>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 p-5 space-y-4">
+        <div className={cardClass}>
           <h3 className="font-semibold text-white">SEO</h3>
           <label className={labelClass}>
             Meta título (opcional)
@@ -367,7 +389,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
           </label>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 p-5 space-y-4">
+        <div className={cardClass}>
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-white">Preguntas frecuentes (FAQ schema)</h3>
             <button
@@ -410,7 +432,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
           ))}
         </div>
 
-        <div className="rounded-xl border border-zinc-800 p-5 space-y-4">
+        <div className={cardClass}>
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-white">Fuentes / evidencia</h3>
             <button
@@ -476,7 +498,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
           ))}
         </div>
 
-        <div className="rounded-xl border border-zinc-800 p-5 space-y-4">
+        <div className={cardClass}>
           <h3 className="font-semibold text-white">CTA final (opcional)</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <input
@@ -495,29 +517,17 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
-          <button
-            onClick={() => handleSave()}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-zinc-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50 transition-colors"
-          >
+          <button onClick={() => handleSave()} disabled={saving} className={secondaryButton}>
             <Save className="w-4 h-4" />
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
           {status !== 'published' && (
-            <button
-              onClick={() => handleSave('published')}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-bold text-zinc-950 hover:bg-amber-300 disabled:opacity-50 transition-colors"
-            >
+            <button onClick={() => handleSave('published')} disabled={saving} className={primaryButton}>
               Guardar y publicar
             </button>
           )}
           {status === 'published' && (
-            <button
-              onClick={() => handleSave('archived')}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-5 py-2.5 text-sm text-zinc-400 hover:text-white disabled:opacity-50 transition-colors"
-            >
+            <button onClick={() => handleSave('archived')} disabled={saving} className={secondaryButton}>
               Archivar
             </button>
           )}

@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabaseClient';
 import type { ContentIdeaRow, IdeaStatus } from '../../lib/database.types';
 import { logAdminAction } from './audit';
+import { ActionError, inputClass, primaryButton, SectionHeader, StateBlock } from './ui';
 
 const IDEA_STATUS: Record<IdeaStatus, string> = {
   new: 'Nueva',
@@ -17,14 +18,18 @@ export const IdeasAdmin: React.FC<{ user: User }> = ({ user }) => {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    setLoadError(false);
+    const { data, error } = await supabase
       .from('content_ideas')
       .select('id, title, notes, status, converted_article_id, created_by, created_at, updated_at')
       .order('created_at', { ascending: false });
-    setIdeas((data ?? []) as ContentIdeaRow[]);
+    if (error) setLoadError(true);
+    else setIdeas((data ?? []) as ContentIdeaRow[]);
     setLoading(false);
   }, []);
 
@@ -39,7 +44,7 @@ export const IdeasAdmin: React.FC<{ user: User }> = ({ user }) => {
       .from('content_ideas')
       .insert({ title: title.trim(), notes: notes.trim() || null, created_by: user.id });
     if (error) {
-      window.alert(`Error: ${error.message}`);
+      setActionError(`No se pudo guardar la idea: ${error.message}`);
       return;
     }
     await logAdminAction(user, 'idea.create', 'idea', null, { title });
@@ -51,7 +56,7 @@ export const IdeasAdmin: React.FC<{ user: User }> = ({ user }) => {
   const handleStatusChange = async (idea: ContentIdeaRow, status: IdeaStatus) => {
     const { error } = await supabase.from('content_ideas').update({ status }).eq('id', idea.id);
     if (error) {
-      window.alert(`Error: ${error.message}`);
+      setActionError(`No se pudo actualizar: ${error.message}`);
       return;
     }
     await logAdminAction(user, `idea.status.${status}`, 'idea', idea.id, { title: idea.title });
@@ -62,7 +67,7 @@ export const IdeasAdmin: React.FC<{ user: User }> = ({ user }) => {
     if (!window.confirm(`¿Eliminar la idea "${idea.title}"?`)) return;
     const { error } = await supabase.from('content_ideas').delete().eq('id', idea.id);
     if (error) {
-      window.alert(`Error: ${error.message}`);
+      setActionError(`No se pudo eliminar: ${error.message}`);
       return;
     }
     await logAdminAction(user, 'idea.delete', 'idea', idea.id, { title: idea.title });
@@ -71,53 +76,53 @@ export const IdeasAdmin: React.FC<{ user: User }> = ({ user }) => {
 
   return (
     <section className="max-w-3xl">
-      <h2 className="text-xl font-bold mb-6">Ideas de contenido</h2>
+      <SectionHeader title="Ideas" description="Captura temas antes de convertirlos en borradores." />
 
-      <form
-        onSubmit={handleCreate}
-        className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 mb-8 space-y-4"
-      >
+      <ActionError message={actionError} onDismiss={() => setActionError(null)} />
+
+      <form onSubmit={handleCreate} className="mb-8 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
         <input
           type="text"
           required
           placeholder="Título o tema de la idea"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-white focus:border-amber-400 focus:outline-none"
+          className={inputClass}
         />
         <textarea
           placeholder="Notas, ángulo, palabra clave objetivo… (opcional)"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-white focus:border-amber-400 focus:outline-none"
+          rows={2}
+          className={inputClass}
         />
-        <button
-          type="submit"
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Guardar idea
+        <button type="submit" className={primaryButton}>
+          <Plus className="h-4 w-4" /> Guardar idea
         </button>
       </form>
 
-      {loading ? (
-        <p className="text-zinc-500">Cargando…</p>
-      ) : (
-        <ul className="space-y-3">
+      {loading && <StateBlock kind="loading" message="Cargando ideas…" />}
+      {!loading && loadError && (
+        <StateBlock kind="error" message="No se pudieron cargar las ideas." onRetry={load} />
+      )}
+      {!loading && !loadError && ideas.length === 0 && (
+        <StateBlock kind="empty" message="Sin ideas todavía. Captura la primera." />
+      )}
+
+      {!loading && !loadError && ideas.length > 0 && (
+        <ul className="divide-y divide-zinc-800/80 rounded-xl border border-zinc-800 bg-zinc-950">
           {ideas.map((idea) => (
-            <li
-              key={idea.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-5 py-4 flex items-start justify-between gap-4"
-            >
+            <li key={idea.id} className="flex items-start justify-between gap-4 px-4 py-3.5">
               <div className="min-w-0">
                 <p className="font-medium text-white">{idea.title}</p>
-                {idea.notes && <p className="text-sm text-zinc-500 mt-1">{idea.notes}</p>}
+                {idea.notes && <p className="mt-1 text-sm text-zinc-500">{idea.notes}</p>}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <select
                   value={idea.status}
                   onChange={(e) => handleStatusChange(idea, e.target.value as IdeaStatus)}
-                  className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-300 focus:border-amber-400 focus:outline-none"
+                  aria-label="Estado de la idea"
+                  className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-300 focus:border-amber-400/70 focus:outline-none"
                 >
                   {(Object.keys(IDEA_STATUS) as IdeaStatus[]).map((status) => (
                     <option key={status} value={status}>
@@ -127,19 +132,15 @@ export const IdeasAdmin: React.FC<{ user: User }> = ({ user }) => {
                 </select>
                 <button
                   onClick={() => handleDelete(idea)}
-                  className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-zinc-800"
+                  className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-900 hover:text-red-400"
                   title="Eliminar"
+                  aria-label="Eliminar idea"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </li>
           ))}
-          {ideas.length === 0 && (
-            <li className="rounded-xl border border-zinc-800 px-5 py-6 text-zinc-500">
-              Sin ideas todavía. Captura la primera.
-            </li>
-          )}
         </ul>
       )}
     </section>
