@@ -49,6 +49,8 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
   const [uploading, setUploading] = useState(false);
   const [slugEdited, setSlugEdited] = useState(Boolean(articleId));
   const [actionError, setActionError] = useState<string | null>(null);
+  // Id real del artículo: se conserva apenas se crea para que un reintento haga UPDATE.
+  const [currentId, setCurrentId] = useState<string | null>(articleId);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
@@ -140,7 +142,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
     setUploading(true);
     try {
       // Para artículos nuevos usamos un id temporal de carpeta.
-      const folderId = articleId ?? 'drafts';
+      const folderId = currentId ?? 'drafts';
       const { webUrl, thumbUrl } = await uploadCover(file, folderId);
       setCoverImageUrl(webUrl);
       setCoverThumbUrl(thumbUrl);
@@ -182,9 +184,9 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
       published_at: publishedAt,
     };
 
-    let savedId = articleId;
-    if (articleId) {
-      const { error } = await supabase.from('articles').update(payload).eq('id', articleId);
+    let savedId = currentId;
+    if (currentId) {
+      const { error } = await supabase.from('articles').update(payload).eq('id', currentId);
       if (error) {
         setActionError(`Error al guardar: ${error.message}`);
         setSaving(false);
@@ -202,6 +204,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
         return;
       }
       savedId = (data as { id: string }).id;
+      setCurrentId(savedId);
     }
 
     if (!savedId) {
@@ -269,8 +272,8 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
   return (
     <section className="max-w-3xl">
       <SectionHeader
-        title={articleId ? 'Editar artículo' : 'Nuevo artículo'}
-        description={articleId ? slug : undefined}
+        title={currentId ? 'Editar artículo' : 'Nuevo artículo'}
+        description={currentId ? slug : undefined}
         action={backButton}
       />
       <ActionError message={actionError} onDismiss={() => setActionError(null)} />
