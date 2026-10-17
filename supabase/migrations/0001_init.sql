@@ -7,10 +7,18 @@
 --   Supabase Dashboard → SQL Editor (proyecto rvvqhpbtqgjpzflopflv)
 -- o vía `supabase db push` con la CLI vinculada.
 --
+-- IMPORTANTE: migración de EJECUCIÓN ÚNICA. Los `create policy` no admiten
+-- IF NOT EXISTS en PostgreSQL y FALLARÁN si el script se reejecuta completo.
+-- (`create table if not exists`, `on conflict do nothing` y
+-- `drop trigger if exists` son solo cortesías parciales.) Si necesitas
+-- reejecutar: haz reset del esquema o borra policies manualmente antes.
+--
 -- Principios:
 --  - RLS habilitado en TODAS las tablas desde el día uno.
---  - Anon (público) solo lee contenido `published` y solo columnas necesarias
---    (la restricción de columnas se hace en el frontend: nunca select('*')).
+--  - Anon (público) solo lee contenido `published` y solo las columnas
+--    públicas concedidas por REVOKE/GRANT (la restricción de columnas se
+--    aplica en la BASE DE DATOS; el frontend solo evita consultas
+--    innecesarias: nunca select('*')).
 --  - Escritura exclusiva de admins verificados vía public.is_admin().
 --  - Sin service role en frontend. Sin multi-tenant. Sin IA. Sin Stripe.
 --  - Storage público por URL directa SIN policy de lectura sobre
@@ -396,16 +404,24 @@ $$;
 -- 10b. published_at automático: se fija SOLO la primera vez que un artículo
 --      pasa a `published` con published_at NULL. Ediciones posteriores y
 --      archivados NO la modifican (preserva fecha original para SEO/schema).
+--      Ramas TG_OP explícitas: OLD nunca se referencia en el camino INSERT.
 create or replace function public.set_published_at()
 returns trigger
 language plpgsql
 as $$
 begin
-  if new.status = 'published'
-     and new.published_at is null
-     and (tg_op = 'INSERT' or old.status is distinct from 'published') then
-    new.published_at = now();
+  if tg_op = 'INSERT' then
+    if new.status = 'published' and new.published_at is null then
+      new.published_at = now();
+    end if;
+  elsif tg_op = 'UPDATE' then
+    if new.status = 'published'
+       and new.published_at is null
+       and old.status is distinct from 'published' then
+      new.published_at = now();
+    end if;
   end if;
+  -- Cualquier otro caso: preservar el valor de published_at.
   return new;
 end;
 $$;
