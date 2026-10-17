@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CharlitronLogo } from './CharlitronLogo';
-import { MessageCircle, Menu, X, ArrowUpRight, Mail, Phone, ShieldCheck, ChevronRight, Sparkles, Home, Layers, Target, Laptop, HelpCircle, Send, Megaphone } from 'lucide-react';
+import { MessageCircle, Menu, X, ArrowUpRight, Mail, Phone, ShieldCheck, ChevronRight, Sparkles, Home, Layers, Target, Laptop, HelpCircle, Send, Megaphone, Newspaper } from 'lucide-react';
 import { PHONE_DISPLAY, CONTACT_EMAIL, createWhatsAppUrl } from '../data/content';
 import { LegalTab } from './LegalPage';
 
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenLegal }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Lock scroll when mobile hamburger modal is open
   useEffect(() => {
@@ -40,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLegal }) => {
     { label: '¿Qué mejorar?', href: '#necesidades', icon: Target },
     { label: 'Proyectos', href: '#evidencia', icon: Laptop, badge: 'Casos Reales' },
     { label: 'Cómo trabajamos', href: '#metodo', icon: HelpCircle },
+    { label: 'Blog', href: '/blog', icon: Newspaper },
     { label: 'Agencia BTL', href: '#agencia', icon: Megaphone, badge: 'Activaciones' },
     { label: 'Contacto', href: '#contacto', icon: Send },
   ];
@@ -47,6 +50,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLegal }) => {
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
     setMobileMenuOpen(false);
+    if (href.startsWith('/')) {
+      navigate(href);
+      return;
+    }
     if (href === '#agencia') {
       window.location.hash = 'agencia';
       window.scrollTo({ top: 0, behavior: 'smooth' });

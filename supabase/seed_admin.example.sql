@@ -1,0 +1,41 @@
+-- ============================================================================
+-- SEED MANUAL — primer administrador
+-- NO versionar con datos reales. Ejecutar a mano en SQL Editor tras 0001_init.
+--
+-- Pasos:
+--  1. En Supabase Dashboard → Authentication → Users → "Add user"
+--     Crear el usuario admin con email + contraseña fuerte.
+--  2. Copiar el UUID del usuario creado.
+--  3. Ejecutar el INSERT de abajo reemplazando los valores.
+-- ============================================================================
+
+-- insert into public.admin_users (user_id)
+-- values ('00000000-0000-0000-0000-000000000000');  -- ← UUID real del usuario Auth
+
+-- Categorías iniciales sugeridas (opcional):
+-- insert into public.categories (name, slug, description) values
+--   ('Desarrollo web', 'desarrollo-web', 'Webs y apps para negocios'),
+--   ('Automatización e IA', 'automatizacion-ia', 'Procesos, automatización e IA práctica'),
+--   ('Marketing local', 'marketing-local', 'BTL, perifoneo y presencia local');
+
+-- ============================================================================
+-- Recuperación de contenido (versionado editorial, article_revisions)
+-- ============================================================================
+-- Si un admin sobrescribe o borra un artículo por accidente, el estado
+-- anterior quedó guardado automáticamente. Como admin autenticado:
+--
+--   1. Localizar la revisión:
+--      select id, title, revision_reason, changed_by, created_at
+--      from public.article_revisions
+--      where article_id = '00000000-0000-0000-0000-000000000000'  -- uuid del artículo
+--      order by created_at desc;
+--
+--   2. Si el artículo sigue existiendo (update accidental), restaurar:
+--      update public.articles a
+--      set title = r.title, content = r.content, excerpt = r.excerpt
+--      from public.article_revisions r
+--      where r.id = 123 and a.id = r.article_id;                  -- id de la revisión
+--
+--   3. Si fue borrado (revision_reason = 'delete'), re-insertar con las
+--      columnas de la revisión vía SQL Editor (service) o recrearlo desde
+--      el panel admin copiando el contenido de la revisión.
