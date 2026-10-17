@@ -154,9 +154,9 @@ create policy articles_admin_update on public.articles
   using (public.is_admin())
   with check (public.is_admin());
 
-create policy articles_admin_delete on public.articles
-  for delete to authenticated
-  using (public.is_admin());
+-- Sin policy DELETE: ningún usuario de la API puede borrar artículos (evita
+-- perder article_sources por ON DELETE CASCADE). "Eliminar" = status 'archived'.
+-- Borrado físico solo por intervención manual con rol privilegiado.
 
 -- Seguridad por COLUMNAS para anon (la RLS limita filas; los grants limitan
 -- columnas — no depender del select explícito del frontend como control de
