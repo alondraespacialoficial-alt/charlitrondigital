@@ -42,7 +42,9 @@ export const MetricsAdmin: React.FC = () => {
     <section className="max-w-2xl">
       <h2 className="text-xl font-bold mb-2">Métricas (últimos 30 días)</h2>
       <p className="text-sm text-zinc-500 mb-6">
-        Medición mínima sin cookies ni datos personales. Solo conteo de vistas por ruta.
+        Medición mínima sin cookies ni datos personales. La recolección desde el
+        navegador está desactivada por seguridad (sin inserts anónimos); se
+        habilitará con un endpoint con rate-limit o Vercel Analytics.
       </p>
 
       {loading ? (

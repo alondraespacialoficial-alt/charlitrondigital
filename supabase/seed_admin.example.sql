@@ -17,3 +17,25 @@
 --   ('Desarrollo web', 'desarrollo-web', 'Webs y apps para negocios'),
 --   ('Automatización e IA', 'automatizacion-ia', 'Procesos, automatización e IA práctica'),
 --   ('Marketing local', 'marketing-local', 'BTL, perifoneo y presencia local');
+
+-- ============================================================================
+-- Recuperación de contenido (versionado editorial, article_revisions)
+-- ============================================================================
+-- Si un admin sobrescribe o borra un artículo por accidente, el estado
+-- anterior quedó guardado automáticamente. Como admin autenticado:
+--
+--   1. Localizar la revisión:
+--      select id, title, revision_reason, changed_by, created_at
+--      from public.article_revisions
+--      where article_id = '00000000-0000-0000-0000-000000000000'  -- uuid del artículo
+--      order by created_at desc;
+--
+--   2. Si el artículo sigue existiendo (update accidental), restaurar:
+--      update public.articles a
+--      set title = r.title, content = r.content, excerpt = r.excerpt
+--      from public.article_revisions r
+--      where r.id = 123 and a.id = r.article_id;                  -- id de la revisión
+--
+--   3. Si fue borrado (revision_reason = 'delete'), re-insertar con las
+--      columnas de la revisión vía SQL Editor (service) o recrearlo desde
+--      el panel admin copiando el contenido de la revisión.

@@ -170,9 +170,9 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
       cta_text: ctaText.trim() || null,
       cta_url: ctaUrl.trim() || null,
       faq: faq.filter((item) => item.question.trim() && item.answer.trim()),
-      // Al publicar por primera vez, fija published_at.
-      published_at:
-        finalStatus === 'published' ? (publishedAt ?? new Date().toISOString()) : publishedAt,
+      // published_at lo fija el trigger de DB al primer pase a `published`
+      // (ver 0001_init.sql §10b). Aquí solo se conserva el valor existente.
+      published_at: publishedAt,
     };
 
     let savedId = articleId;
