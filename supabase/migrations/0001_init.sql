@@ -17,10 +17,32 @@
 --    storage.objects (no se expone el listado general de objetos).
 --  - Sin inserts anónimos de métricas (se resolverá con endpoint
 --    rate-limited o Vercel Analytics en una fase posterior).
+--  - Seguridad por COLUMNAS además de filas: anon solo lee las columnas
+--    públicas de `articles` (created_by excluido).
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 0. Helper: ¿el usuario autenticado es admin?
+-- 0. admin_users — quién puede operar el panel.
+--    Se crea ANTES que is_admin() (la función la referencia) para mantener
+--    la migración limpia y portable en proyectos nuevos.
+--    El primer alta se hace manualmente (ver seed_admin.example.sql).
+-- ----------------------------------------------------------------------------
+create table if not exists public.admin_users (
+  user_id    uuid primary key references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table public.admin_users enable row level security;
+
+-- Un usuario solo puede verse a sí mismo (para que el frontend valide el rol).
+create policy admin_users_select_own on public.admin_users
+  for select to authenticated
+  using (auth.uid() = user_id);
+
+-- Sin políticas de escritura: solo service_role / SQL manual puede insertar.
+
+-- ----------------------------------------------------------------------------
+-- 1. Helper: ¿el usuario autenticado es admin?
 --    security definer para evitar recursión de RLS en admin_users.
 --    search_path fijo para evitar secuestro de esquema.
 -- ----------------------------------------------------------------------------
@@ -40,24 +62,6 @@ $$;
 -- policies públicas de anon NO la invocan, ver secciones 3 y 6).
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to authenticated;
-
--- ----------------------------------------------------------------------------
--- 1. admin_users — quién puede operar el panel
---    El primer alta se hace manualmente (ver seed_admin.example.sql).
--- ----------------------------------------------------------------------------
-create table if not exists public.admin_users (
-  user_id    uuid primary key references auth.users (id) on delete cascade,
-  created_at timestamptz not null default now()
-);
-
-alter table public.admin_users enable row level security;
-
--- Un usuario solo puede verse a sí mismo (para que el frontend valide el rol).
-create policy admin_users_select_own on public.admin_users
-  for select to authenticated
-  using (auth.uid() = user_id);
-
--- Sin políticas de escritura: solo service_role / SQL manual puede insertar.
 
 -- ----------------------------------------------------------------------------
 -- 2. categories
@@ -145,6 +149,23 @@ create policy articles_admin_update on public.articles
 create policy articles_admin_delete on public.articles
   for delete to authenticated
   using (public.is_admin());
+
+-- Seguridad por COLUMNAS para anon (la RLS limita filas; los grants limitan
+-- columnas — no depender del select explícito del frontend como control de
+-- seguridad). Se revoca el SELECT general que otorgan los default privileges
+-- de Supabase y se conceden solo las columnas públicas necesarias.
+-- `created_by` queda EXCLUIDO del acceso anónimo.
+-- Authenticated (admin) conserva lectura completa por sus grants de tabla.
+-- Las policies de anon solo referencian `status` (incluida abajo) y los
+-- embeds públicos usan categories(name, slug) con grant completo: PostgREST
+-- y el prerender siguen pudiendo consultar artículos publicados.
+revoke select on public.articles from anon;
+grant select (
+  id, title, slug, excerpt, content,
+  cover_image_url, cover_thumb_url, cover_alt, category_id,
+  author_name, status, meta_title, meta_description, faq,
+  cta_text, cta_url, published_at, updated_at
+) on public.articles to anon;
 
 -- ----------------------------------------------------------------------------
 -- 4. article_revisions — versionado editorial mínimo (red de seguridad)

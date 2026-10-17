@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Eye } from 'lucide-react';
+import { Plus, Pencil, Archive, Eye } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabaseClient';
 import type { ArticleRow, CategoryRow } from '../../lib/database.types';
@@ -44,14 +44,22 @@ export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
     void load();
   }, [load]);
 
-  const handleDelete = async (article: ListRow) => {
-    if (!window.confirm(`¿Eliminar "${article.title}"? Esta acción no se puede deshacer.`)) return;
-    const { error } = await supabase.from('articles').delete().eq('id', article.id);
+  // Sin hard-delete desde la UI: archivar preserva el artículo Y sus fuentes
+  // (article_sources tiene ON DELETE CASCADE: un delete destruiría las
+  // fuentes sin revisiones propias). El DELETE real queda reservado a
+  // intervención manual extraordinaria vía SQL (la policy sigue existiendo).
+  const handleArchive = async (article: ListRow) => {
+    if (!window.confirm(`¿Archivar "${article.title}"? Dejará de mostrarse públicamente.`))
+      return;
+    const { error } = await supabase
+      .from('articles')
+      .update({ status: 'archived' })
+      .eq('id', article.id);
     if (error) {
-      window.alert(`Error al eliminar: ${error.message}`);
+      window.alert(`Error al archivar: ${error.message}`);
       return;
     }
-    await logAdminAction(user, 'article.delete', 'article', article.id, { title: article.title });
+    await logAdminAction(user, 'article.archive', 'article', article.id, { title: article.title });
     void load();
   };
 
@@ -136,13 +144,15 @@ export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleDelete(article)}
-                        className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-800"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {article.status !== 'archived' && (
+                        <button
+                          onClick={() => handleArchive(article)}
+                          className="p-2 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-zinc-800"
+                          title="Archivar (sin borrado destructivo)"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
