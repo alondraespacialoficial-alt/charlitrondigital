@@ -210,10 +210,18 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
     }
 
     // Fuentes: reemplazo completo (simple y suficiente para MVP).
-    await supabase.from('article_sources').delete().eq('article_id', savedId);
+    const { error: deleteSourcesError } = await supabase
+      .from('article_sources')
+      .delete()
+      .eq('article_id', savedId);
+    if (deleteSourcesError) {
+      setActionError(`Error al actualizar las fuentes: ${deleteSourcesError.message}`);
+      setSaving(false);
+      return;
+    }
     const validSources = sources.filter((s) => s.title.trim() && s.url.trim());
     if (validSources.length > 0) {
-      await supabase.from('article_sources').insert(
+      const { error: insertSourcesError } = await supabase.from('article_sources').insert(
         validSources.map((s) => ({
           article_id: savedId,
           title: s.title.trim(),
@@ -222,6 +230,11 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
           published_date: s.published_date || null,
         })),
       );
+      if (insertSourcesError) {
+        setActionError(`Error al guardar las fuentes: ${insertSourcesError.message}`);
+        setSaving(false);
+        return;
+      }
     }
 
     await logAdminAction(
