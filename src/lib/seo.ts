@@ -1,6 +1,6 @@
 // Helpers SEO: actualización de metas en cliente (para la SPA) y
 // generadores de JSON-LD (también usados por el prerender estático).
-import { absoluteUrl, SITE_NAME, SITE_URL } from './site';
+import { absoluteUrl, DEFAULT_SOCIAL_IMAGE, DEFAULT_SOCIAL_IMAGE_ALT, SITE_NAME, SITE_URL } from './site';
 import { buildArticleJsonLd } from './jsonld';
 import type { ArticleRow } from './database.types';
 
@@ -9,7 +9,9 @@ export interface PageMeta {
   description: string;
   canonicalPath: string;
   ogImage?: string | null;
+  ogImageAlt?: string | null;
   ogType?: 'website' | 'article';
+  publishedTime?: string | null;
 }
 
 function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
@@ -20,6 +22,10 @@ function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
     document.head.appendChild(el);
   }
   el.setAttribute('content', content);
+}
+
+function removeMeta(attr: 'name' | 'property', key: string) {
+  document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)?.remove();
 }
 
 function upsertLink(rel: string, href: string) {
@@ -35,6 +41,8 @@ function upsertLink(rel: string, href: string) {
 const JSONLD_ID = 'charlitron-jsonld-page';
 
 export function applyPageMeta(meta: PageMeta, jsonLd?: object | object[]) {
+  // og:image siempre presente y absoluta: portada del artículo o imagen de marca.
+  const ogImage = meta.ogImage ?? DEFAULT_SOCIAL_IMAGE;
   document.title = meta.title;
   upsertMeta('name', 'description', meta.description);
   upsertLink('canonical', absoluteUrl(meta.canonicalPath));
@@ -43,13 +51,18 @@ export function applyPageMeta(meta: PageMeta, jsonLd?: object | object[]) {
   upsertMeta('property', 'og:url', absoluteUrl(meta.canonicalPath));
   upsertMeta('property', 'og:type', meta.ogType ?? 'website');
   upsertMeta('property', 'og:site_name', SITE_NAME);
-  if (meta.ogImage) {
-    upsertMeta('property', 'og:image', meta.ogImage);
-    upsertMeta('name', 'twitter:image', meta.ogImage);
+  upsertMeta('property', 'og:image', ogImage);
+  upsertMeta('property', 'og:image:alt', meta.ogImageAlt ?? DEFAULT_SOCIAL_IMAGE_ALT);
+  if (meta.ogType === 'article' && meta.publishedTime) {
+    upsertMeta('property', 'article:published_time', meta.publishedTime);
+  } else {
+    // Evita que la meta de un artículo quede activa al navegar a otra ruta.
+    removeMeta('property', 'article:published_time');
   }
   upsertMeta('name', 'twitter:card', 'summary_large_image');
   upsertMeta('name', 'twitter:title', meta.title);
   upsertMeta('name', 'twitter:description', meta.description);
+  upsertMeta('name', 'twitter:image', ogImage);
 
   document.getElementById(JSONLD_ID)?.remove();
   if (jsonLd) {
