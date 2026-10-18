@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, ExternalLink, HelpCircle } from 'lucide-react';
 import { BlogShell } from './BlogShell';
+import { ShareArticle } from './ShareArticle';
 import { getPublishedArticleBySlug, listArticleSources } from './api';
 import type { ArticleRow, ArticleSourceRow, CategoryRow, FaqItem } from '../../lib/database.types';
 import { applyPageMeta, articleJsonLd } from '../../lib/seo';
 import { renderMarkdownLite } from '../../lib/markdown';
 import { trackPageView } from '../../lib/analytics';
-import { SITE_NAME } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 
 type ArticleWithCategory = ArticleRow & { categories?: Pick<CategoryRow, 'name' | 'slug'> | null };
 
@@ -53,7 +54,9 @@ export const BlogPostPage: React.FC = () => {
         description,
         canonicalPath: `/blog/${article.slug}`,
         ogImage: article.cover_image_url,
+        ogImageAlt: article.cover_image_url ? (article.cover_alt ?? article.title) : undefined,
         ogType: 'article',
+        publishedTime: article.published_at,
       },
       articleJsonLd(article, article.categories?.name),
     );
@@ -197,6 +200,8 @@ export const BlogPostPage: React.FC = () => {
             </a>
           </div>
         )}
+
+        <ShareArticle url={absoluteUrl(`/blog/${article.slug}`)} title={article.title} />
       </article>
     </BlogShell>
   );

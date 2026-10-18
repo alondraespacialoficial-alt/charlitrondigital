@@ -28,6 +28,11 @@ const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://charlitrondigital.vercel
   '',
 );
 const SITE_NAME = 'Charlitron Digital';
+// Imagen OG de marca (1200x630). site.ts no se puede importar aquí porque usa
+// import.meta.env (solo Vite); este valor debe coincidir con DEFAULT_SOCIAL_IMAGE.
+const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/og-default.png`;
+const DEFAULT_SOCIAL_IMAGE_ALT =
+  'Logo de Charlitron Digital, agencia digital en San Luis Potosí';
 
 const DIST_DIR = path.resolve(process.cwd(), 'dist');
 
@@ -54,6 +59,10 @@ interface HeadMeta {
   canonical: string;
   ogType: 'website' | 'article';
   ogImage?: string | null;
+  ogImageAlt?: string | null;
+  ogImageWidth?: number;
+  ogImageHeight?: number;
+  publishedTime?: string | null;
   jsonLd?: object | object[];
 }
 
@@ -93,6 +102,27 @@ function applyHead(template: string, meta: HeadMeta): string {
       `<meta property="og:image:secure_url" content="${img}" />`,
     );
     html = html.replace(/<meta name="twitter:image" content="[^"]*" \/>/, `<meta name="twitter:image" content="${img}" />`);
+    if (meta.ogImageAlt) {
+      const alt = escapeHtmlAttr(meta.ogImageAlt);
+      html = html.replace(
+        /<meta property="og:image:alt" content="[^"]*" \/>/,
+        `<meta property="og:image:alt" content="${alt}" />`,
+      );
+      html = html.replace(
+        /<meta name="twitter:image:alt" content="[^"]*" \/>/,
+        `<meta name="twitter:image:alt" content="${alt}" />`,
+      );
+    }
+    if (meta.ogImageWidth && meta.ogImageHeight) {
+      html = html.replace(
+        /<meta property="og:image:width" content="[^"]*" \/>/,
+        `<meta property="og:image:width" content="${meta.ogImageWidth}" />`,
+      );
+      html = html.replace(
+        /<meta property="og:image:height" content="[^"]*" \/>/,
+        `<meta property="og:image:height" content="${meta.ogImageHeight}" />`,
+      );
+    }
   }
   html = html.replace(
     /<meta name="twitter:url" content="[^"]*" \/>/,
@@ -107,9 +137,18 @@ function applyHead(template: string, meta: HeadMeta): string {
     `<meta name="twitter:description" content="${escapeHtmlAttr(meta.description)}" />`,
   );
 
+  const headExtras: string[] = [];
+  if (meta.ogType === 'article' && meta.publishedTime) {
+    headExtras.push(
+      `    <meta property="article:published_time" content="${escapeHtmlAttr(meta.publishedTime)}" />`,
+    );
+  }
   if (meta.jsonLd) {
-    const jsonLdScript = `<script type="application/ld+json">${JSON.stringify(meta.jsonLd).replace(/</g, '\\u003c')}</script>`;
-    html = html.replace('</head>', `    ${jsonLdScript}\n  </head>`);
+    const jsonLdScript = `    <script type="application/ld+json">${JSON.stringify(meta.jsonLd).replace(/</g, '\\u003c')}</script>`;
+    headExtras.push(jsonLdScript);
+  }
+  if (headExtras.length > 0) {
+    html = html.replace('</head>', `${headExtras.join('\n')}\n  </head>`);
   }
 
   return html;
@@ -241,6 +280,8 @@ async function main() {
       'Artículos de Charlitron Digital sobre desarrollo web, apps, automatización, IA y marketing local para negocios en México.',
     canonical: `${SITE_URL}/blog`,
     ogType: 'website',
+    ogImage: DEFAULT_SOCIAL_IMAGE,
+    ogImageAlt: DEFAULT_SOCIAL_IMAGE_ALT,
     jsonLd: buildBlogJsonLd(SITE_URL, SITE_NAME),
   };
   await writeFile(
@@ -253,13 +294,20 @@ async function main() {
   for (const article of articles) {
     const dir = path.join(DIST_DIR, 'blog', article.slug);
     await mkdir(dir, { recursive: true });
+    // OG por artículo: siempre cover_image_url (nunca el thumb 480px);
+    // sin portada, fallback a la imagen social de marca.
+    const hasCover = Boolean(article.cover_image_url);
     const meta: HeadMeta = {
       title: article.meta_title ?? `${article.title} | Blog ${SITE_NAME}`,
       description:
         article.meta_description ?? article.excerpt ?? `Artículo de ${SITE_NAME}.`,
       canonical: `${SITE_URL}/blog/${article.slug}`,
       ogType: 'article',
-      ogImage: article.cover_image_url,
+      ogImage: article.cover_image_url ?? DEFAULT_SOCIAL_IMAGE,
+      ogImageAlt: hasCover ? (article.cover_alt ?? article.title) : DEFAULT_SOCIAL_IMAGE_ALT,
+      ogImageWidth: hasCover ? 1600 : 1200,
+      ogImageHeight: hasCover ? 900 : 630,
+      publishedTime: article.published_at,
       jsonLd: buildArticleJsonLd(article, article.categories?.name, SITE_URL, SITE_NAME),
     };
     await writeFile(
