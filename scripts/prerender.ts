@@ -103,9 +103,14 @@ function applyHead(template: string, meta: HeadMeta): string {
     );
     html = html.replace(/<meta name="twitter:image" content="[^"]*" \/>/, `<meta name="twitter:image" content="${img}" />`);
     if (meta.ogImageAlt) {
+      const alt = escapeHtmlAttr(meta.ogImageAlt);
       html = html.replace(
         /<meta property="og:image:alt" content="[^"]*" \/>/,
-        `<meta property="og:image:alt" content="${escapeHtmlAttr(meta.ogImageAlt)}" />`,
+        `<meta property="og:image:alt" content="${alt}" />`,
+      );
+      html = html.replace(
+        /<meta name="twitter:image:alt" content="[^"]*" \/>/,
+        `<meta name="twitter:image:alt" content="${alt}" />`,
       );
     }
     if (meta.ogImageWidth && meta.ogImageHeight) {

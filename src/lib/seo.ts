@@ -63,6 +63,7 @@ export function applyPageMeta(meta: PageMeta, jsonLd?: object | object[]) {
   upsertMeta('name', 'twitter:title', meta.title);
   upsertMeta('name', 'twitter:description', meta.description);
   upsertMeta('name', 'twitter:image', ogImage);
+  upsertMeta('name', 'twitter:image:alt', meta.ogImageAlt ?? DEFAULT_SOCIAL_IMAGE_ALT);
 
   document.getElementById(JSONLD_ID)?.remove();
   if (jsonLd) {
