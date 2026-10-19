@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import type { ArticleRow, ArticleStatus, CategoryRow } from '../../lib/database.types';
 import { ArticleEditor } from './ArticleEditor';
 import { logAdminAction } from './audit';
+import { requestBlogRedeploy } from './redeploy';
 import { ActionError, primaryButton, SectionHeader, StateBlock } from './ui';
 
 const STATUS_LABELS: Record<ArticleStatus, string> = {
@@ -69,6 +70,14 @@ export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
     }
     await logAdminAction(user, 'article.archive', 'article', article.id, { title: article.title });
     void load();
+    // Archivar cambia el contenido público → redeploy de producción. No es
+    // bloqueante: si falla solo se avisa; el archivado ya quedó aplicado.
+    const redeploy = await requestBlogRedeploy();
+    if (!redeploy.ok) {
+      setActionError(
+        'Artículo archivado, pero no se pudo actualizar el sitemap/prerender automáticamente. Se aplicará en el próximo despliegue.',
+      );
+    }
   };
 
   if (editingId !== null) {

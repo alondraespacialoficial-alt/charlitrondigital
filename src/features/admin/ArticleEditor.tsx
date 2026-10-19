@@ -11,6 +11,7 @@ import type {
 } from '../../lib/database.types';
 import { uploadCover } from './images';
 import { logAdminAction } from './audit';
+import { requestBlogRedeploy, shouldTriggerBlogRedeploy } from './redeploy';
 import { ActionError, inputClass as baseInputClass, primaryButton, SectionHeader, StateBlock } from './ui';
 
 function slugify(text: string): string {
@@ -247,6 +248,21 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
       savedId,
       { title: payload.title, slug: payload.slug },
     );
+
+    // Redeploy de producción (prerender + sitemap) solo si el cambio altera
+    // el contenido público: publicar, editar estando publicado o archivar.
+    // Borradores y revisión no disparan nada. Si falla, el guardado NO se
+    // revierte: solo se avisa y el editor se queda abierto.
+    if (shouldTriggerBlogRedeploy(finalStatus)) {
+      const redeploy = await requestBlogRedeploy();
+      if (!redeploy.ok) {
+        setActionError(
+          'Artículo guardado, pero no se pudo actualizar el sitemap/prerender automáticamente. Se aplicará en el próximo despliegue.',
+        );
+        setSaving(false);
+        return;
+      }
+    }
 
     setSaving(false);
     onClose();
