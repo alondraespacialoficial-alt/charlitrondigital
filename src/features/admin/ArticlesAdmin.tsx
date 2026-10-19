@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Archive, Eye, Pencil, Plus } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabaseClient';
@@ -43,6 +43,9 @@ export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
+  // Guarda anti-reentrada: un doble click encolado no debe archivar ni
+  // disparar el redeploy dos veces.
+  const archiving = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,21 +65,27 @@ export const ArticlesAdmin: React.FC<{ user: User }> = ({ user }) => {
 
   // Sin hard-delete: article_sources tiene ON DELETE CASCADE y la policy DELETE no existe.
   const handleArchive = async (article: ListRow) => {
+    if (archiving.current) return;
     if (!window.confirm(`¿Archivar "${article.title}"? Dejará de mostrarse públicamente.`)) return;
-    const { error } = await supabase.from('articles').update({ status: 'archived' }).eq('id', article.id);
-    if (error) {
-      setActionError(`No se pudo archivar: ${error.message}`);
-      return;
-    }
-    await logAdminAction(user, 'article.archive', 'article', article.id, { title: article.title });
-    void load();
-    // Archivar cambia el contenido público → redeploy de producción. No es
-    // bloqueante: si falla solo se avisa; el archivado ya quedó aplicado.
-    const redeploy = await requestBlogRedeploy();
-    if (!redeploy.ok) {
-      setActionError(
-        'Artículo archivado, pero no se pudo actualizar el sitemap/prerender automáticamente. Se aplicará en el próximo despliegue.',
-      );
+    archiving.current = true;
+    try {
+      const { error } = await supabase.from('articles').update({ status: 'archived' }).eq('id', article.id);
+      if (error) {
+        setActionError(`No se pudo archivar: ${error.message}`);
+        return;
+      }
+      await logAdminAction(user, 'article.archive', 'article', article.id, { title: article.title });
+      void load();
+      // Archivar cambia el contenido público → redeploy de producción. No es
+      // bloqueante: si falla solo se avisa; el archivado ya quedó aplicado.
+      const redeploy = await requestBlogRedeploy();
+      if (!redeploy.ok) {
+        setActionError(
+          'Artículo archivado, pero no se pudo actualizar el sitemap/prerender automáticamente. Se aplicará en el próximo despliegue.',
+        );
+      }
+    } finally {
+      archiving.current = false;
     }
   };
 
