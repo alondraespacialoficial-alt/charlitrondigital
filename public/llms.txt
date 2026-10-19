@@ -1,0 +1,32 @@
+# Charlitron Digital
+
+> Charlitron Digital es una agencia digital en San Luis Potosí que crea páginas web, apps, automatizaciones e IA para negocios. También ofrece activaciones BTL, producción de video y perifoneo para marcas en México.
+
+## Ubicación
+
+San Luis Potosí, México.
+
+## Servicios
+
+- Desarrollo web: sitios rápidos, modernos y orientados a generar contactos o ventas.
+- Apps para negocios: aplicaciones y herramientas diseñadas alrededor de procesos reales del negocio.
+- Automatización: reducir tareas repetitivas y conectar procesos (notificaciones por WhatsApp, reportes, sincronización).
+- Inteligencia artificial para negocios: IA integrada cuando realmente aporta valor (respuestas a clientes, clasificación de prospectos, análisis comercial).
+- WhatsApp y atención digital: atención directa y sin rodeos, recordatorios y seguimiento automático por WhatsApp.
+- Marketing local para negocios en San Luis Potosí y México.
+- BTL y activaciones: activaciones de marca y publicidad BTL en campo.
+- Perifoneo profesional.
+- Video y contenido: producción de video profesional, contenido y campañas.
+
+## Páginas clave
+
+- Home: https://www.charlitrondigital.com/
+- Blog: https://www.charlitrondigital.com/blog
+
+## Blog
+
+Los artículos del blog son contenido editorial propio de Charlitron Digital: ideas sobre webs, apps, automatización, IA y marketing local para negocios en México.
+
+## Sitemap
+
+https://www.charlitrondigital.com/sitemap.xml

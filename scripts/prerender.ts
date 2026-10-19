@@ -17,6 +17,16 @@ import path from 'node:path';
 import { renderMarkdownLite } from '../src/lib/markdown';
 import { buildArticleJsonLd, buildBlogJsonLd } from '../src/lib/jsonld';
 import type { ArticleRow, CategoryRow } from '../src/lib/database.types';
+import {
+  AGENCY_SERVICES,
+  BUSINESS_NEEDS,
+  CONTACT_EMAIL,
+  PHONE_DISPLAY,
+  SERVICES_LIST,
+  SHOWCASE_PROJECTS,
+  WORK_STEPS,
+  createWhatsAppUrl,
+} from '../src/data/content';
 
 // En local carga .env.local / .env; en Vercel las vars ya vienen en process.env.
 loadEnv({ path: ['.env.local', '.env'] });
@@ -215,6 +225,108 @@ ${items}
 </main>`;
 }
 
+// Home estática: contenido REAL de la landing (Hero, WhatWeDo, NeedsSelector,
+// EvidenceSection, HowWeWork, ComplementaryServices, ContactSection) para que
+// crawlers e IA que no ejecutan JS no vean la página vacía. React reemplaza
+// este HTML al montar la SPA; el usuario final no nota diferencia.
+function renderHomeStatic(): string {
+  const waHeroUrl = createWhatsAppUrl(
+    'Hola Charlitron Digital, vi su página web y quiero platicar sobre una solución digital para mi negocio.',
+  );
+  const parts: string[] = [];
+  parts.push(
+    '<main style="max-width:64rem;margin:0 auto;padding:3rem 1rem;font-family:sans-serif;">',
+  );
+
+  // Hero
+  parts.push('<p><strong>CHARLITRON DIGITAL</strong> · Agencia digital + tecnología para crecer</p>');
+  parts.push('<h1>Tecnología que mueve negocio.</h1>');
+  parts.push(
+    '<p>Webs, apps, automatizaciones e IA para eliminar fricción, vender más y hacer que tu operación funcione mejor cada día.</p>',
+  );
+  // Descripción con ubicación: texto real del meta description de index.html.
+  parts.push(
+    `<p>${SITE_NAME} es una agencia digital en San Luis Potosí que crea páginas web, apps, automatizaciones e IA para negocios. También ofrece activaciones BTL, producción de video y perifoneo para marcas en México.</p>`,
+  );
+  parts.push(
+    `<p><a href="#contacto">Hablemos de tu proyecto</a> · <a href="#soluciones">Ver soluciones</a> · <a href="${waHeroUrl}">WhatsApp: ${PHONE_DISPLAY}</a></p>`,
+  );
+  parts.push('<p>10+ años de experiencia · Web • Apps · Atención directa</p>');
+
+  // Soluciones (WhatWeDo + SERVICES_LIST)
+  parts.push('<section id="soluciones">');
+  parts.push('<h2>Más que tecnología: una ventaja competitiva.</h2>');
+  parts.push(
+    '<p>Eliminamos fricción, automatizamos procesos y convertimos la operación diaria en una máquina más clara, rápida y rentable.</p>',
+  );
+  for (const service of SERVICES_LIST) {
+    parts.push(`<h3>${service.title}</h3>`);
+    parts.push(`<p>${service.description}</p>`);
+    parts.push(`<ul>${service.detailPoints.map((d) => `<li>${d}</li>`).join('')}</ul>`);
+  }
+  parts.push('</section>');
+
+  // Necesidades (NeedsSelector + BUSINESS_NEEDS)
+  parts.push('<section id="necesidades">');
+  parts.push('<h2>¿Qué quieres mejorar en tu negocio?</h2>');
+  parts.push(
+    '<p>No necesitas dominar términos técnicos. Elige la meta principal que tienes hoy y te asesoramos directamente por WhatsApp.</p>',
+  );
+  parts.push(
+    `<ul>${BUSINESS_NEEDS.map((n) => `<li><strong>${n.label}:</strong> ${n.description}</li>`).join('')}</ul>`,
+  );
+  parts.push('</section>');
+
+  // Evidencia (EvidenceSection + SHOWCASE_PROJECTS)
+  parts.push('<section id="evidencia">');
+  parts.push('<h2>No solo entregamos trabajo. Generamos impacto real.</h2>');
+  parts.push(
+    '<p>Soluciones vivas, operativas y pensadas para negocios que quieren más orden, más ventas y menos fricción en cada proceso.</p>',
+  );
+  parts.push(
+    `<ul>${SHOWCASE_PROJECTS.map(
+      (p) => `<li><strong>${p.title}</strong> — ${p.subtitle}. ${p.description}</li>`,
+    ).join('')}</ul>`,
+  );
+  parts.push('</section>');
+
+  // Método (HowWeWork + WORK_STEPS)
+  parts.push('<section id="metodo">');
+  parts.push('<h2>Cómo trabajamos</h2>');
+  parts.push('<p>Sin procesos burocráticos ni meses de juntas interminables. Vamos directo al grano.</p>');
+  parts.push(
+    `<ol>${WORK_STEPS.map((s) => `<li><strong>${s.title}:</strong> ${s.description}</li>`).join('')}</ol>`,
+  );
+  parts.push('</section>');
+
+  // Agencia BTL (ComplementaryServices + AGENCY_SERVICES)
+  parts.push('<section id="agencia-btl">');
+  parts.push('<h2>Charlitron Agencia — Offline &amp; BTL</h2>');
+  parts.push(
+    '<p>Activaciones de marca, producción de video profesional, perifoneo y campañas publicitarias para posicionar tu negocio en la calle.</p>',
+  );
+  parts.push(`<ul>${AGENCY_SERVICES.map((a) => `<li>${a}</li>`).join('')}</ul>`);
+  parts.push('</section>');
+
+  // Contacto (ContactSection + datos de Footer/content.ts)
+  parts.push('<section id="contacto">');
+  parts.push('<h2>Cuéntanos qué quieres mejorar.</h2>');
+  parts.push(
+    '<p>No necesitas saber qué tecnología necesitas. Cuéntanos cómo trabajas y nosotros analizamos qué podemos simplificar.</p>',
+  );
+  parts.push(
+    '<p>Respuesta directa por WhatsApp. Atención personalizada e inmediata sin intermediarios ni filtros complejos.</p>',
+  );
+  parts.push(
+    `<p><a href="${waHeroUrl}">WhatsApp: ${PHONE_DISPLAY}</a> · <a href="tel:4444237092">${PHONE_DISPLAY}</a> · <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>`,
+  );
+  parts.push(`<p>${SITE_NAME} — San Luis Potosí, México.</p>`);
+  parts.push('</section>');
+
+  parts.push('</main>');
+  return parts.join('\n');
+}
+
 function buildSitemap(articles: ArticleWithCategory[]): string {
   const urls: string[] = [];
   const staticPages: Array<{ loc: string; priority: string }> = [
@@ -317,6 +429,14 @@ async function main() {
     );
   }
 
+  // Home: inyecta el contenido real en dist/index.html usando el template
+  // prístino en memoria (las páginas del blog ya se escribieron desde él).
+  await writeFile(
+    path.join(DIST_DIR, 'index.html'),
+    injectBody(template, renderHomeStatic()),
+    'utf8',
+  );
+
   // sitemap.xml + robots.txt (con el dominio real de VITE_SITE_URL)
   await writeFile(path.join(DIST_DIR, 'sitemap.xml'), buildSitemap(articles), 'utf8');
   await writeFile(
@@ -324,7 +444,7 @@ async function main() {
     `User-agent: *\nAllow: /\nDisallow: /admin\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
     'utf8',
   );
-  console.log('[prerender] blog/*, sitemap.xml, robots.txt generados ✔');
+  console.log('[prerender] home, blog/*, sitemap.xml, robots.txt generados ✔');
 }
 
 main().catch((error) => {
