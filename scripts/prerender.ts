@@ -356,7 +356,7 @@ function renderAgencyHubStatic(): string {
     ).join('')}</ul>`,
   );
   parts.push(
-    '<p>También operamos: activaciones BTL, perifoneo estratégico, volanteo, producción audiovisual y contenido para campañas.</p>',
+    '<p>También producimos contenido y campañas publicitarias. Escríbenos por WhatsApp y armamos tu propuesta.</p>',
   );
   parts.push(
     '<p><a href="/">Charlitron Digital</a> (webs, apps, automatizaciones e IA) y Charlitron Agencia (ejecución presencial y BTL) son dos unidades de la misma marca.</p>',
@@ -396,6 +396,19 @@ function renderBtlServiceStatic(service: BtlService): string {
   for (const faq of service.faqs) {
     parts.push(`<h3>${faq.question}</h3>`);
     parts.push(`<p>${faq.answer}</p>`);
+  }
+  if (service.casos && service.casos.length > 0) {
+    parts.push('<h2>Casos documentados</h2>');
+    parts.push(
+      `<ul>${service.casos
+        .map(
+          (caso) =>
+            `<li>${caso.href ? `<a href="${caso.href}">${caso.title}</a>` : caso.title}${
+              caso.note ? ` <em>${caso.note}</em>` : ''
+            }</li>`,
+        )
+        .join('')}</ul>`,
+    );
   }
   parts.push('<h2>Servicios relacionados</h2>');
   parts.push(

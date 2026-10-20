@@ -163,6 +163,32 @@ export const BtlServicePage: React.FC = () => {
           </div>
         </section>
 
+        {/* Casos documentados (redacción cuidadosa; note aclara intermediarias) */}
+        {service.casos && service.casos.length > 0 && (
+          <section className="border-b border-zinc-800/80 px-4 py-14 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-5xl">
+              <h2 className="font-display text-2xl font-bold text-white">Casos documentados</h2>
+              <div className="mt-6 space-y-3">
+                {service.casos.map((caso) => (
+                  <div key={caso.title} className="border border-zinc-800 bg-[#101013] p-5">
+                    {caso.href ? (
+                      <Link
+                        to={caso.href}
+                        className="text-sm font-semibold text-white underline-offset-4 transition-colors hover:text-amber-400 hover:underline"
+                      >
+                        {caso.title} →
+                      </Link>
+                    ) : (
+                      <p className="text-sm font-semibold text-white">{caso.title}</p>
+                    )}
+                    {caso.note && <p className="mt-1 text-xs italic text-zinc-500">{caso.note}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Servicios relacionados + CTA */}
         <section className="px-4 py-14 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl">
