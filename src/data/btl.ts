@@ -39,9 +39,9 @@ export interface BtlService {
 export const AGENCY_HUB = {
   metaTitle: 'Charlitron Agencia | Agencia BTL en San Luis Potosí',
   metaDescription:
-    'Agencia BTL en San Luis Potosí con 10 años de experiencia: demostradoras, promotores, edecanes, activaciones, perifoneo, volanteo y producción audiovisual para marcas y agencias.',
+    'Agencia BTL en San Luis Potosí con más de 10 años de experiencia: demostradoras, promotores, edecanes, activaciones, perifoneo, volanteo y producción audiovisual para marcas y agencias.',
   h1: 'Agencia BTL en San Luis Potosí',
-  tagline: '10 años creando experiencias que se viven en campo.',
+  tagline: 'Más de 10 años creando experiencias que se viven en campo.',
   intro:
     'Charlitron Agencia es la unidad de ejecución presencial y BTL de la marca Charlitron. Diseñamos y operamos acciones en campo —demostraciones, promoción, edecanes, activaciones, perifoneo y volanteo— para marcas locales y como partner de ejecución local para agencias y marcas nacionales.',
   whatsappMessage:
@@ -110,18 +110,18 @@ export const BTL_SERVICES: BtlService[] = [
     serviceType: 'Promotores de ventas y personal promocional',
     metaTitle: 'Promotores de Ventas en San Luis Potosí | Charlitron Agencia',
     metaDescription:
-      'Promotores de ventas y personal promocional en San Luis Potosí: impulso en punto de venta, activaciones y campañas en campo con supervisión local. Cotiza por WhatsApp.',
+      'Promotores de ventas y personal promocional en San Luis Potosí: impulso en punto de venta, activaciones y campañas en campo con coordinación operativa según el alcance contratado. Cotiza por WhatsApp.',
     h1: 'Promotores y personal promocional en San Luis Potosí',
     intro:
-      'Personal promocional que impulsa tus ventas donde ocurre la compra: en el punto de venta y en la calle. Nuestros promotores comunican el mensaje de tu marca, atienden al público y apoyan el cierre de ventas en campo.',
+      'Personal promocional que da mayor presencia a tu producto donde ocurre la compra: en el punto de venta y en la calle. Nuestros promotores comunican el mensaje de tu marca, interactúan con el público y apoyan la promoción y atención al consumidor en campo.',
     queIncluye: [
-      'Promotores con perfil comercial para impulso en punto de venta',
+      'Promotores con perfil comercial para promoción en punto de venta',
       'Personal promocional para activaciones, rutas y campañas en campo',
       'Comunicación del mensaje y las promociones vigentes de tu marca',
-      'Coordinación operativa y supervisión local según el alcance contratado',
+      'Coordinación operativa según el alcance contratado',
     ],
     usos: [
-      'Impulso de ventas en tiendas, mostradores y autoservicios',
+      'Promoción y presencia de producto en tiendas, mostradores y autoservicios',
       'Activaciones de marca en zonas de alto tráfico',
       'Campañas de promoción por rutas o zonas',
       'Apoyo en lanzamientos y temporadas comerciales',
@@ -220,14 +220,14 @@ export const BTL_SERVICES: BtlService[] = [
     serviceType: 'Ejecución local de campañas para agencias y marcas nacionales',
     metaTitle: 'Ejecución Local en SLP para Agencias | Charlitron Agencia',
     metaDescription:
-      'Ejecutamos tu campaña en San Luis Potosí: demostradoras, promotores, edecanes, activaciones y perifoneo con supervisión local y evidencia de campo. Partner BTL para agencias nacionales.',
+      'Ejecutamos tu campaña en San Luis Potosí: demostradoras, promotores, edecanes, activaciones y perifoneo con coordinación local y evidencia de campo cuando forme parte del alcance contratado. Partner BTL para agencias nacionales.',
     h1: 'Tu proveedor local en San Luis Potosí para campañas nacionales',
     intro:
       'Si tu agencia o marca nacional necesita ejecutar en San Luis Potosí, somos tu equipo en campo. Operamos demostradoras, promotores, edecanes, activaciones, perifoneo y volanteo con coordinación local, comunicación directa y evidencia según lo acordado. Cuando una campaña llega a través de una agencia intermediaria, nuestra relación comercial es con la agencia: ejecutamos como su partner local.',
     queIncluye: [
       'Reclutamiento y coordinación local de personal: demostradoras, promotores y edecanes',
       'Ejecución de activaciones, perifoneo y volanteo en los puntos acordados',
-      'Supervisión en campo y evidencia de actividad según el alcance contratado',
+      'Coordinación en campo y evidencia de actividad según el alcance contratado',
       'Comunicación directa con tu equipo durante toda la campaña',
     ],
     usos: [

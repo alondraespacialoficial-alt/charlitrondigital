@@ -109,13 +109,13 @@ export const AgencyHubPage: React.FC = () => {
                 loop
                 playsInline
                 preload="metadata"
-                aria-label="Video de trayectoria de Charlitron Agencia: 10 años"
+                aria-label="Video de trayectoria de Charlitron Agencia: más de 10 años"
               >
                 Tu navegador no puede reproducir este video.
               </video>
             </div>
             <p className="mt-2 text-right text-[11px] uppercase tracking-wider text-zinc-500">
-              Una década de ideas que salen a la calle
+              Más de una década de ideas que salen a la calle
             </p>
           </div>
         </section>
