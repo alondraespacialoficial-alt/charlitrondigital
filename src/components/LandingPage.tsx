@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from './Header';
 import { Hero } from './Hero';
 import { WhatWeDo } from './WhatWeDo';
@@ -11,17 +12,17 @@ import { Footer } from './Footer';
 import { FloatingWhatsApp } from './FloatingWhatsApp';
 import { LegalPage, LegalTab } from './LegalPage';
 import { CookieConsent } from './CookieConsent';
-import { AgencyPage } from './AgencyPage';
 import { CotizadorInterno } from '../features/cotizador/CotizadorInterno';
 
-// Landing original de Charlitron Digital. La navegación interna de
-// legales/agencia sigue por hash (deuda técnica: migrar a rutas reales).
+// Landing original de Charlitron Digital. La navegación de legales sigue por
+// hash (deuda técnica). La antigua vista #agencia ahora es la ruta real
+// /agencia; el hash se redirige para no romper enlaces existentes.
 export const LandingPage: React.FC = () => {
   const [legalTab, setLegalTab] = useState<LegalTab | null>(null);
-  const [agencyPage, setAgencyPage] = useState(false);
   const [cotizadorOpen, setCotizadorOpen] = useState(false);
   const logoClickCount = useRef(0);
   const logoClickTimeout = useRef<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleLogoClickSequence = (event: MouseEvent) => {
@@ -60,12 +61,13 @@ export const LandingPage: React.FC = () => {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
+      // Compatibilidad: la antigua vista de Agencia vivía tras #agencia (nunca
+      // fue indexable). Ahora es la ruta real /agencia; redirigimos con
+      // replace para que el botón "atrás" no entre en bucle.
       if (hash === '#agencia') {
-        setAgencyPage(true);
-        setLegalTab(null);
+        navigate('/agencia', { replace: true });
         return;
       }
-      setAgencyPage(false);
       if (hash.includes('privacidad') || hash === '#legal-privacidad' || hash === '#aviso-privacidad') {
         setLegalTab('privacidad');
       } else if (hash.includes('terminos') || hash === '#legal-terminos' || hash === '#terminos-condiciones') {
@@ -96,7 +98,6 @@ export const LandingPage: React.FC = () => {
 
   const handleBackToMain = () => {
     setLegalTab(null);
-    setAgencyPage(false);
     if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
@@ -105,16 +106,6 @@ export const LandingPage: React.FC = () => {
 
   if (cotizadorOpen) {
     return <CotizadorInterno onClose={() => setCotizadorOpen(false)} />;
-  }
-
-  if (agencyPage) {
-    return (
-      <>
-        <AgencyPage onBack={handleBackToMain} />
-        <FloatingWhatsApp />
-        <CookieConsent onOpenLegal={handleOpenLegal} />
-      </>
-    );
   }
 
   if (legalTab) {

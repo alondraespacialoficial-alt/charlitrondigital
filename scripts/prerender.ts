@@ -15,8 +15,14 @@ import { config as loadEnv } from 'dotenv';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { renderMarkdownLite } from '../src/lib/markdown';
-import { buildArticleJsonLd, buildBlogJsonLd } from '../src/lib/jsonld';
+import {
+  buildAgencyHubJsonLd,
+  buildArticleJsonLd,
+  buildBlogJsonLd,
+  buildBtlServiceJsonLd,
+} from '../src/lib/jsonld';
 import type { ArticleRow, CategoryRow } from '../src/lib/database.types';
+import { AGENCY_HUB, BTL_SERVICES, type BtlService } from '../src/data/btl';
 import {
   AGENCY_SERVICES,
   BUSINESS_NEEDS,
@@ -327,10 +333,88 @@ function renderHomeStatic(): string {
   return parts.join('\n');
 }
 
+// /agencia: hub BTL estático (mismo contenido comercial que la SPA, desde
+// src/data/btl.ts) para crawlers e IA sin JS.
+function renderAgencyHubStatic(): string {
+  const waUrl = createWhatsAppUrl(AGENCY_HUB.whatsappMessage);
+  const parts: string[] = [];
+  parts.push(
+    '<main style="max-width:64rem;margin:0 auto;padding:3rem 1rem;font-family:sans-serif;">',
+  );
+  parts.push('<nav><a href="/">Inicio</a> › <strong>Agencia BTL</strong></nav>');
+  parts.push('<p><strong>CHARLITRON AGENCIA</strong> · Ejecución presencial y BTL</p>');
+  parts.push(`<h1>${AGENCY_HUB.h1}</h1>`);
+  parts.push(`<p><strong>${AGENCY_HUB.tagline}</strong></p>`);
+  parts.push(`<p>${AGENCY_HUB.intro}</p>`);
+  parts.push(
+    `<p><a href="${waUrl}">WhatsApp: ${PHONE_DISPLAY}</a> · <a href="tel:4444237092">${PHONE_DISPLAY}</a> · <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>`,
+  );
+  parts.push('<h2>Servicios BTL en San Luis Potosí</h2>');
+  parts.push(
+    `<ul>${BTL_SERVICES.map(
+      (s) => `<li><a href="/agencia/${s.slug}"><strong>${s.serviceType}</strong></a> — ${s.intro}</li>`,
+    ).join('')}</ul>`,
+  );
+  parts.push(
+    '<p>También operamos: activaciones BTL, perifoneo estratégico, volanteo, producción audiovisual y contenido para campañas.</p>',
+  );
+  parts.push(
+    '<p><a href="/">Charlitron Digital</a> (webs, apps, automatizaciones e IA) y Charlitron Agencia (ejecución presencial y BTL) son dos unidades de la misma marca.</p>',
+  );
+  parts.push('<p>Charlitron Agencia — San Luis Potosí, México.</p>');
+  parts.push('</main>');
+  return parts.join('\n');
+}
+
+// /agencia/<slug>: ficha estática de cada servicio BTL (con FAQs visibles,
+// requisito para el FAQPage del JSON-LD).
+function renderBtlServiceStatic(service: BtlService): string {
+  const waUrl = createWhatsAppUrl(service.whatsappMessage);
+  const related = service.relatedSlugs
+    .map((slug) => BTL_SERVICES.find((s) => s.slug === slug))
+    .filter((s): s is BtlService => Boolean(s));
+  const parts: string[] = [];
+  parts.push(
+    '<main style="max-width:64rem;margin:0 auto;padding:3rem 1rem;font-family:sans-serif;">',
+  );
+  parts.push(
+    `<nav><a href="/">Inicio</a> › <a href="/agencia">Agencia BTL</a> › <strong>${service.shortName}</strong></nav>`,
+  );
+  parts.push('<p><strong>CHARLITRON AGENCIA</strong> · Servicio BTL</p>');
+  parts.push(`<h1>${service.h1}</h1>`);
+  parts.push(`<p>${service.intro}</p>`);
+  parts.push(`<p><a href="${waUrl}">Cotizar por WhatsApp: ${PHONE_DISPLAY}</a></p>`);
+  parts.push('<h2>Qué incluye</h2>');
+  parts.push(`<ul>${service.queIncluye.map((item) => `<li>${item}</li>`).join('')}</ul>`);
+  parts.push('<h2>Usos frecuentes</h2>');
+  parts.push(`<ul>${service.usos.map((item) => `<li>${item}</li>`).join('')}</ul>`);
+  parts.push('<h2>Cobertura</h2>');
+  parts.push(`<p>${service.cobertura}</p>`);
+  parts.push('<h2>Cómo contratamos</h2>');
+  parts.push(`<ol>${service.proceso.map((step) => `<li>${step}</li>`).join('')}</ol>`);
+  parts.push('<h2>Preguntas frecuentes</h2>');
+  for (const faq of service.faqs) {
+    parts.push(`<h3>${faq.question}</h3>`);
+    parts.push(`<p>${faq.answer}</p>`);
+  }
+  parts.push('<h2>Servicios relacionados</h2>');
+  parts.push(
+    `<ul>${related
+      .map((r) => `<li><a href="/agencia/${r.slug}">${r.serviceType}</a></li>`)
+      .join('')}</ul>`,
+  );
+  parts.push('<p><a href="/agencia">Ver todos los servicios BTL de Charlitron Agencia</a></p>');
+  parts.push('<p>Charlitron Agencia — San Luis Potosí, México.</p>');
+  parts.push('</main>');
+  return parts.join('\n');
+}
+
 function buildSitemap(articles: ArticleWithCategory[]): string {
   const urls: string[] = [];
   const staticPages: Array<{ loc: string; priority: string }> = [
     { loc: `${SITE_URL}/`, priority: '1.0' },
+    { loc: `${SITE_URL}/agencia`, priority: '0.9' },
+    ...BTL_SERVICES.map((s) => ({ loc: `${SITE_URL}/agencia/${s.slug}`, priority: '0.9' })),
     { loc: `${SITE_URL}/blog`, priority: '0.8' },
   ];
   for (const page of staticPages) {
@@ -425,6 +509,44 @@ async function main() {
     await writeFile(
       path.join(dir, 'index.html'),
       injectBody(applyHead(template, meta), renderArticleStatic(article)),
+      'utf8',
+    );
+  }
+
+  // /agencia (hub BTL) — Fase 1 SEO. Se escribe ANTES de inyectar la home
+  // para partir del template prístino (igual que el blog).
+  await mkdir(path.join(DIST_DIR, 'agencia'), { recursive: true });
+  const agencyMeta: HeadMeta = {
+    title: AGENCY_HUB.metaTitle,
+    description: AGENCY_HUB.metaDescription,
+    canonical: `${SITE_URL}/agencia`,
+    ogType: 'website',
+    ogImage: DEFAULT_SOCIAL_IMAGE,
+    ogImageAlt: DEFAULT_SOCIAL_IMAGE_ALT,
+    jsonLd: buildAgencyHubJsonLd(SITE_URL, BTL_SERVICES),
+  };
+  await writeFile(
+    path.join(DIST_DIR, 'agencia', 'index.html'),
+    injectBody(applyHead(template, agencyMeta), renderAgencyHubStatic()),
+    'utf8',
+  );
+
+  // /agencia/<slug> — páginas de servicio BTL (Fase 1).
+  for (const service of BTL_SERVICES) {
+    const dir = path.join(DIST_DIR, 'agencia', service.slug);
+    await mkdir(dir, { recursive: true });
+    const meta: HeadMeta = {
+      title: service.metaTitle,
+      description: service.metaDescription,
+      canonical: `${SITE_URL}/agencia/${service.slug}`,
+      ogType: 'website',
+      ogImage: DEFAULT_SOCIAL_IMAGE,
+      ogImageAlt: DEFAULT_SOCIAL_IMAGE_ALT,
+      jsonLd: buildBtlServiceJsonLd(service, SITE_URL),
+    };
+    await writeFile(
+      path.join(dir, 'index.html'),
+      injectBody(applyHead(template, meta), renderBtlServiceStatic(service)),
       'utf8',
     );
   }

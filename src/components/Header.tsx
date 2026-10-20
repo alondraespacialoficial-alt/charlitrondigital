@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLegal }) => {
     { label: 'Proyectos', href: '#evidencia', icon: Laptop, badge: 'Casos Reales' },
     { label: 'Cómo trabajamos', href: '#metodo', icon: HelpCircle },
     { label: 'Blog', href: '/blog', icon: Newspaper },
-    { label: 'Agencia BTL', href: '#agencia', icon: Megaphone, badge: 'Activaciones' },
+    { label: 'Agencia BTL', href: '/agencia', icon: Megaphone, badge: 'Activaciones' },
     { label: 'Contacto', href: '#contacto', icon: Send },
   ];
 
@@ -52,11 +52,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLegal }) => {
     setMobileMenuOpen(false);
     if (href.startsWith('/')) {
       navigate(href);
-      return;
-    }
-    if (href === '#agencia') {
-      window.location.hash = 'agencia';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     const target = document.querySelector(href);
