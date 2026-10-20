@@ -300,12 +300,14 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
     // Redeploy de producción (prerender + sitemap) solo si el cambio altera
     // el contenido público: publicar, editar estando publicado o archivar.
     // Borradores y revisión no disparan nada. Si falla, el guardado NO se
-    // revierte: solo se avisa y el editor se queda abierto.
+    // revierte: se avisa con la CAUSA EXACTA (p.ej. deploy_hook_not_configured
+    // si BLOG_DEPLOY_HOOK_URL no está habilitada en el entorno Preview) y el
+    // editor se queda abierto.
     if (shouldTriggerBlogRedeploy(finalStatus)) {
       const redeploy = await requestBlogRedeploy();
       if (!redeploy.ok) {
         setActionError(
-          'Artículo guardado, pero no se pudo actualizar el sitemap/prerender automáticamente. Se aplicará en el próximo despliegue.',
+          `Artículo guardado, pero el redeploy automático falló (${redeploy.error}). Se aplicará en el próximo despliegue.`,
         );
         setSaving(false);
         return;
