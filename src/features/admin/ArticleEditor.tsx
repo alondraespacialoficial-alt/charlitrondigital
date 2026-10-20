@@ -13,6 +13,7 @@ import { uploadCover } from './images';
 import { logAdminAction } from './audit';
 import { requestBlogRedeploy, shouldTriggerBlogRedeploy } from './redeploy';
 import { ActionError, inputClass as baseInputClass, primaryButton, SectionHeader, StateBlock } from './ui';
+import { BTL_SERVICES } from '../../data/btl';
 
 function slugify(text: string): string {
   return text
@@ -71,6 +72,10 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [faq, setFaq] = useState<FaqItem[]>([]);
   const [sources, setSources] = useState<SourceDraft[]>([]);
+  // Servicios BTL relacionados (migración 0002). Advertencia VISIBLE si la
+  // carga o el guardado de relaciones falla: nunca se oculta el error.
+  const [serviceSlugs, setServiceSlugs] = useState<string[]>([]);
+  const [servicesWarning, setServicesWarning] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -126,6 +131,20 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
           published_date: s.published_date ?? '',
         })),
       );
+
+      // Relaciones con servicios BTL. Si la tabla aún no existe (migración
+      // 0002 pendiente), se avisa sin bloquear el resto del editor.
+      const { data: relRows, error: relError } = await supabase
+        .from('article_btl_services')
+        .select('service_slug')
+        .eq('article_id', articleId);
+      if (relError) {
+        setServicesWarning(
+          `No se pudieron cargar los servicios relacionados (¿falta aplicar la migración 0002?): ${relError.message}`,
+        );
+      } else {
+        setServiceSlugs((relRows ?? []).map((r) => r.service_slug));
+      }
       setLoading(false);
     };
     void load();
@@ -162,6 +181,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
       return;
     }
     setActionError(null);
+    setServicesWarning(null);
     setSaving(true);
 
     const payload = {
@@ -241,12 +261,40 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
       }
     }
 
+    // Servicios BTL relacionados: reemplazo completo (mismo patrón que las
+    // fuentes), ANTES del redeploy. Si falla (p.ej. migración 0002 sin
+    // aplicar), el artículo queda guardado pero se muestra una advertencia
+    // VISIBLE y el editor no se cierra, para poder reintentar.
+    const { error: deleteRelsError } = await supabase
+      .from('article_btl_services')
+      .delete()
+      .eq('article_id', savedId);
+    if (deleteRelsError) {
+      setServicesWarning(
+        `El artículo se guardó, pero no se pudieron actualizar los servicios relacionados: ${deleteRelsError.message}`,
+      );
+      setSaving(false);
+      return;
+    }
+    if (serviceSlugs.length > 0) {
+      const { error: insertRelsError } = await supabase.from('article_btl_services').insert(
+        serviceSlugs.map((serviceSlug) => ({ article_id: savedId, service_slug: serviceSlug })),
+      );
+      if (insertRelsError) {
+        setServicesWarning(
+          `El artículo se guardó, pero no se pudieron guardar los servicios relacionados: ${insertRelsError.message}`,
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
     await logAdminAction(
       user,
       articleId ? `article.update.${finalStatus}` : `article.create.${finalStatus}`,
       'article',
       savedId,
-      { title: payload.title, slug: payload.slug },
+      { title: payload.title, slug: payload.slug, service_slugs: serviceSlugs },
     );
 
     // Redeploy de producción (prerender + sitemap) solo si el cambio altera
@@ -293,6 +341,14 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
         action={backButton}
       />
       <ActionError message={actionError} onDismiss={() => setActionError(null)} />
+      {servicesWarning && (
+        <div
+          role="alert"
+          className="mt-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-200"
+        >
+          ⚠️ {servicesWarning}
+        </div>
+      )}
 
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -528,6 +584,36 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ user, articleId, o
               </div>
             </div>
           ))}
+        </div>
+
+        <div className={cardClass}>
+          <h3 className="font-semibold text-white">Servicios relacionados (Charlitron Agencia)</h3>
+          <p className="text-xs text-zinc-400">
+            Enlazan este artículo con las páginas de servicio BTL (/agencia/...) en el sitio
+            público. Selecciona todos los que apliquen.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {BTL_SERVICES.map((service) => (
+              <label
+                key={service.slug}
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-amber-400"
+                  checked={serviceSlugs.includes(service.slug)}
+                  onChange={(e) =>
+                    setServiceSlugs(
+                      e.target.checked
+                        ? [...serviceSlugs, service.slug]
+                        : serviceSlugs.filter((s) => s !== service.slug),
+                    )
+                  }
+                />
+                {service.shortName}
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className={cardClass}>

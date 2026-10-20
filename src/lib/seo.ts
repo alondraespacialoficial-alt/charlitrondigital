@@ -75,6 +75,10 @@ export function applyPageMeta(meta: PageMeta, jsonLd?: object | object[]) {
   }
 }
 
-export function articleJsonLd(article: ArticleRow, categoryName?: string | null): object[] {
-  return buildArticleJsonLd(article, categoryName, SITE_URL, SITE_NAME);
+export function articleJsonLd(
+  article: ArticleRow,
+  categoryName?: string | null,
+  serviceSlugs: string[] = [],
+): object[] {
+  return buildArticleJsonLd(article, categoryName, SITE_URL, SITE_NAME, serviceSlugs);
 }

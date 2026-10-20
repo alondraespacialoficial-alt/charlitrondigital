@@ -69,3 +69,45 @@ export async function listCategories(): Promise<CategoryRow[]> {
   if (error) throw error;
   return (data ?? []) as CategoryRow[];
 }
+
+// Slugs de servicios BTL relacionados con un artículo (migración 0002).
+// Lectura pública: si la tabla aún no existe, devuelve [] (sin bloque).
+export async function listArticleServiceSlugs(articleId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('article_btl_services')
+    .select('service_slug')
+    .eq('article_id', articleId);
+  if (error) return [];
+  return (data ?? []).map((row) => row.service_slug);
+}
+
+export interface RelatedArticleItem {
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  published_at: string | null;
+}
+
+// Consulta inversa: artículos publicados relacionados con un servicio BTL.
+// La RLS ya excluye drafts/review/archived para anon; el filtro articles.status
+// lo hace explícito. Si la tabla aún no existe, devuelve [] (sin bloque).
+export async function listArticlesByServiceSlug(
+  serviceSlug: string,
+): Promise<RelatedArticleItem[]> {
+  const { data, error } = await supabase
+    .from('article_btl_services')
+    .select('articles!inner(title, slug, excerpt, published_at, status)')
+    .eq('service_slug', serviceSlug)
+    .eq('articles.status', 'published');
+  if (error) return [];
+  return (
+    (data ?? []) as unknown as { articles: RelatedArticleItem & { status: string } }[]
+  )
+    .filter((row) => row.articles.status === 'published')
+    .map((row) => ({
+      title: row.articles.title,
+      slug: row.articles.slug,
+      excerpt: row.articles.excerpt,
+      published_at: row.articles.published_at,
+    }));
+}

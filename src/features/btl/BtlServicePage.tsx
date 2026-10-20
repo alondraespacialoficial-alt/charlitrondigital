@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -6,6 +6,7 @@ import {
   ClipboardList,
   MapPin,
   MessageCircle,
+  Newspaper,
   Route,
 } from 'lucide-react';
 import { BtlLayout } from './BtlLayout';
@@ -14,6 +15,10 @@ import { buildBtlServiceJsonLd } from '../../lib/jsonld';
 import { SITE_URL } from '../../lib/site';
 import { getBtlCase, getBtlService } from '../../data/btl';
 import { createWhatsAppUrl } from '../../data/content';
+import {
+  listArticlesByServiceSlug,
+  type RelatedArticleItem,
+} from '../../features/blog/api';
 
 // Template único de las páginas de servicio BTL. El contenido sale del
 // catálogo src/data/btl.ts; un slug desconocido redirige al hub /agencia.
@@ -45,6 +50,19 @@ export const BtlServicePage: React.FC = () => {
   const caseStudies = (service.casos ?? [])
     .map((id) => getBtlCase(id))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
+
+  // Artículos del blog relacionados con este servicio (migración 0002).
+  const [relatedArticles, setRelatedArticles] = useState<RelatedArticleItem[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    setRelatedArticles([]);
+    listArticlesByServiceSlug(service.slug).then((items) => {
+      if (!cancelled) setRelatedArticles(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [service]);
 
   return (
     <BtlLayout>
@@ -199,6 +217,39 @@ export const BtlServicePage: React.FC = () => {
               >
                 Ver todos los casos documentados →
               </Link>
+            </div>
+          </section>
+        )}
+
+        {/* Artículos del blog relacionados (solo publicados; si hay) */}
+        {relatedArticles.length > 0 && (
+          <section className="border-b border-zinc-800/80 px-4 py-14 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-5xl">
+              <h2 className="flex items-center gap-2 font-display text-2xl font-bold text-white">
+                <Newspaper className="h-5 w-5 text-amber-400" aria-hidden="true" />
+                Artículos relacionados
+              </h2>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {relatedArticles.map((item) => (
+                  <Link
+                    key={item.slug}
+                    to={`/blog/${item.slug}`}
+                    className="group border border-zinc-800 bg-[#101013] p-5 transition-colors hover:border-amber-400/60"
+                  >
+                    <h3 className="font-display text-base font-semibold text-white group-hover:text-amber-300">
+                      {item.title}
+                    </h3>
+                    {item.excerpt && (
+                      <p className="mt-2 text-xs leading-5 text-zinc-400 line-clamp-3">
+                        {item.excerpt}
+                      </p>
+                    )}
+                    <span className="mt-4 inline-block text-[11px] font-semibold uppercase tracking-wider text-amber-400">
+                      Leer artículo →
+                    </span>
+                  </Link>
+                ))}
+              </div>
             </div>
           </section>
         )}
