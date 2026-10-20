@@ -12,7 +12,7 @@ import { BtlLayout } from './BtlLayout';
 import { applyPageMeta } from '../../lib/seo';
 import { buildBtlServiceJsonLd } from '../../lib/jsonld';
 import { SITE_URL } from '../../lib/site';
-import { BTL_SERVICES, getBtlService } from '../../data/btl';
+import { getBtlCase, getBtlService } from '../../data/btl';
 import { createWhatsAppUrl } from '../../data/content';
 
 // Template único de las páginas de servicio BTL. El contenido sale del
@@ -42,6 +42,9 @@ export const BtlServicePage: React.FC = () => {
   const related = service.relatedSlugs
     .map((relatedSlug) => getBtlService(relatedSlug))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
+  const caseStudies = (service.casos ?? [])
+    .map((id) => getBtlCase(id))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   return (
     <BtlLayout>
@@ -163,28 +166,39 @@ export const BtlServicePage: React.FC = () => {
           </div>
         </section>
 
-        {/* Casos documentados (redacción cuidadosa; note aclara intermediarias) */}
-        {service.casos && service.casos.length > 0 && (
+        {/* Casos documentados (catálogo BTL_CASES; nota visible si hubo intermediaria) */}
+        {caseStudies.length > 0 && (
           <section className="border-b border-zinc-800/80 px-4 py-14 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-5xl">
               <h2 className="font-display text-2xl font-bold text-white">Casos documentados</h2>
               <div className="mt-6 space-y-3">
-                {service.casos.map((caso) => (
-                  <div key={caso.title} className="border border-zinc-800 bg-[#101013] p-5">
-                    {caso.href ? (
+                {caseStudies.map((caso) => (
+                  <div key={caso.id} className="border border-zinc-800 bg-[#101013] p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-400">
+                      {caso.projectType}
+                    </p>
+                    {caso.articleSlug ? (
                       <Link
-                        to={caso.href}
-                        className="text-sm font-semibold text-white underline-offset-4 transition-colors hover:text-amber-400 hover:underline"
+                        to={`/blog/${caso.articleSlug}`}
+                        className="mt-1 inline-block text-sm font-semibold text-white underline-offset-4 transition-colors hover:text-amber-400 hover:underline"
                       >
-                        {caso.title} →
+                        {caso.name} → leer el caso
                       </Link>
                     ) : (
-                      <p className="text-sm font-semibold text-white">{caso.title}</p>
+                      <p className="mt-1 text-sm font-semibold text-white">{caso.name}</p>
                     )}
-                    {caso.note && <p className="mt-1 text-xs italic text-zinc-500">{caso.note}</p>}
+                    {caso.intermediaryNote && (
+                      <p className="mt-1 text-xs italic text-zinc-500">{caso.intermediaryNote}</p>
+                    )}
                   </div>
                 ))}
               </div>
+              <Link
+                to="/agencia/casos"
+                className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-400 transition-colors hover:text-amber-300"
+              >
+                Ver todos los casos documentados →
+              </Link>
             </div>
           </section>
         )}
