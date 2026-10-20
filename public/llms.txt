@@ -1,12 +1,17 @@
 # Charlitron Digital
 
-> Charlitron Digital es una agencia digital en San Luis Potosí que crea páginas web, apps, automatizaciones e IA para negocios. También ofrece activaciones BTL, producción de video y perifoneo para marcas en México.
+> Charlitron Digital es una agencia digital en San Luis Potosí que crea páginas web, apps, automatizaciones e IA para negocios. La marca Charlitron tiene dos unidades: Charlitron Digital (tecnología) y Charlitron Agencia (ejecución presencial y BTL).
 
 ## Ubicación
 
 San Luis Potosí, México.
 
-## Servicios
+## Unidades de la marca Charlitron
+
+- Charlitron Digital: páginas web, apps, automatizaciones e inteligencia artificial para negocios.
+- Charlitron Agencia: ejecución presencial y BTL en San Luis Potosí (demostradoras, promotores, edecanes, activaciones, perifoneo, volanteo y producción audiovisual).
+
+## Servicios — Charlitron Digital
 
 - Desarrollo web: sitios rápidos, modernos y orientados a generar contactos o ventas.
 - Apps para negocios: aplicaciones y herramientas diseñadas alrededor de procesos reales del negocio.
@@ -14,18 +19,38 @@ San Luis Potosí, México.
 - Inteligencia artificial para negocios: IA integrada cuando realmente aporta valor (respuestas a clientes, clasificación de prospectos, análisis comercial).
 - WhatsApp y atención digital: atención directa y sin rodeos, recordatorios y seguimiento automático por WhatsApp.
 - Marketing local para negocios en San Luis Potosí y México.
-- BTL y activaciones: activaciones de marca y publicidad BTL en campo.
-- Perifoneo profesional.
-- Video y contenido: producción de video profesional, contenido y campañas.
+
+## Servicios — Charlitron Agencia (BTL, ejecución local en San Luis Potosí)
+
+- Demostradoras de productos: demostración, degustación y atención al consumidor en punto de venta, activaciones y lanzamientos. Coordinación operativa según el alcance contratado.
+- Promotores de ventas y personal promocional: impulso en punto de venta, activaciones y campañas en campo.
+- Edecanes para eventos y activaciones: imagen profesional, atención a invitados y apoyo operativo.
+- Ejecución local de campañas para agencias y marcas nacionales: Charlitron Agencia opera como partner local en San Luis Potosí. Cuando una campaña de una marca nacional llega a través de una agencia intermediaria, la relación comercial es con la agencia.
+- Activaciones BTL, perifoneo estratégico, volanteo y producción audiovisual.
+
+### Cobertura BTL
+
+San Luis Potosí capital y zona metropolitana. Otras ubicaciones dentro del estado se evalúan por proyecto. No se promete cobertura nacional: la ejecución es local.
 
 ## Páginas clave
 
 - Home: https://www.charlitrondigital.com/
+- Agencia BTL: https://www.charlitrondigital.com/agencia
+- Demostradoras en San Luis Potosí: https://www.charlitrondigital.com/agencia/demostradoras-san-luis-potosi
+- Promotores en San Luis Potosí: https://www.charlitrondigital.com/agencia/promotores-san-luis-potosi
+- Edecanes en San Luis Potosí: https://www.charlitrondigital.com/agencia/edecanes-san-luis-potosi
+- Ejecución local para agencias: https://www.charlitrondigital.com/agencia/ejecucion-local-agencias
 - Blog: https://www.charlitrondigital.com/blog
 
 ## Blog
 
 Los artículos del blog son contenido editorial propio de Charlitron Digital: ideas sobre webs, apps, automatización, IA y marketing local para negocios en México.
+
+## Contacto
+
+- WhatsApp: +52 444 423 7092
+- Facebook: https://www.facebook.com/charlitronagencia
+- Instagram: https://www.instagram.com/charlitron_agencia/
 
 ## Sitemap
 

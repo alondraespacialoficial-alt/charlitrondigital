@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { AGENCY_SERVICES } from '../data/content';
 import { ArrowUpRight } from 'lucide-react';
 
@@ -49,13 +50,13 @@ export const ComplementaryServices: React.FC = () => {
           </div>
 
           <div className="shrink-0 w-full md:w-auto">
-            <a
-              href="#agencia"
+            <Link
+              to="/agencia"
               className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 text-white font-semibold text-sm border border-zinc-600/80 hover:border-amber-400/60 transition-all backdrop-blur-md shadow-lg cursor-pointer group/btn"
             >
               <span>Explorar Charlitron Agencia</span>
               <ArrowUpRight className="w-4 h-4 text-amber-400 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-            </a>
+            </Link>
           </div>
         </div>
       </div>
