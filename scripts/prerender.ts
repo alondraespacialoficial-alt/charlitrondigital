@@ -19,10 +19,20 @@ import {
   buildAgencyHubJsonLd,
   buildArticleJsonLd,
   buildBlogJsonLd,
+  buildBtlCasesJsonLd,
   buildBtlServiceJsonLd,
 } from '../src/lib/jsonld';
 import type { ArticleRow, CategoryRow } from '../src/lib/database.types';
-import { AGENCY_HUB, BTL_SERVICES, type BtlService } from '../src/data/btl';
+import {
+  AGENCY_HUB,
+  BTL_CASES,
+  BTL_CASES_PAGE,
+  BTL_SERVICES,
+  getBtlCase,
+  getBtlService,
+  type BtlCaseStudy,
+  type BtlService,
+} from '../src/data/btl';
 import {
   AGENCY_SERVICES,
   BUSINESS_NEEDS,
@@ -359,6 +369,9 @@ function renderAgencyHubStatic(): string {
     '<p>También producimos contenido y campañas publicitarias. Escríbenos por WhatsApp y armamos tu propuesta.</p>',
   );
   parts.push(
+    '<p><a href="/agencia/casos">Casos documentados: OXXO, RAC, Hellmann’s (ejecución mediante agencia intermediaria) y Restaurante Galicia</a></p>',
+  );
+  parts.push(
     '<p><a href="/">Charlitron Digital</a> (webs, apps, automatizaciones e IA) y Charlitron Agencia (ejecución presencial y BTL) son dos unidades de la misma marca.</p>',
   );
   parts.push('<p>Charlitron Agencia — San Luis Potosí, México.</p>');
@@ -398,17 +411,25 @@ function renderBtlServiceStatic(service: BtlService): string {
     parts.push(`<p>${faq.answer}</p>`);
   }
   if (service.casos && service.casos.length > 0) {
-    parts.push('<h2>Casos documentados</h2>');
-    parts.push(
-      `<ul>${service.casos
-        .map(
-          (caso) =>
-            `<li>${caso.href ? `<a href="${caso.href}">${caso.title}</a>` : caso.title}${
-              caso.note ? ` <em>${caso.note}</em>` : ''
-            }</li>`,
-        )
-        .join('')}</ul>`,
-    );
+    const cases = service.casos
+      .map((id) => getBtlCase(id))
+      .filter((c): c is BtlCaseStudy => Boolean(c));
+    if (cases.length > 0) {
+      parts.push('<h2>Casos documentados</h2>');
+      parts.push(
+        `<ul>${cases
+          .map((caso) => {
+            const label = `${caso.name} — ${caso.projectType}`;
+            return `<li>${
+              caso.articleSlug ? `<a href="/blog/${caso.articleSlug}">${label}</a>` : label
+            }${caso.intermediaryNote ? ` <em>${caso.intermediaryNote}</em>` : ''}</li>`;
+          })
+          .join('')}</ul>`,
+      );
+      parts.push(
+        '<p><a href="/agencia/casos">Ver todos los casos documentados de Charlitron Agencia</a></p>',
+      );
+    }
   }
   parts.push('<h2>Servicios relacionados</h2>');
   parts.push(
@@ -422,11 +443,57 @@ function renderBtlServiceStatic(service: BtlService): string {
   return parts.join('\n');
 }
 
+// /agencia/casos: colección estática de casos documentados (Fase 3A).
+// Enlaza artículos del blog SOLO cuando existen (nunca URLs inventadas).
+function renderBtlCasesStatic(): string {
+  const waUrl = createWhatsAppUrl(BTL_CASES_PAGE.whatsappMessage);
+  const parts: string[] = [];
+  parts.push(
+    '<main style="max-width:64rem;margin:0 auto;padding:3rem 1rem;font-family:sans-serif;">',
+  );
+  parts.push(
+    '<nav><a href="/">Inicio</a> › <a href="/agencia">Agencia BTL</a> › <strong>Casos documentados</strong></nav>',
+  );
+  parts.push('<p><strong>CHARLITRON AGENCIA</strong> · Casos documentados</p>');
+  parts.push(`<h1>${BTL_CASES_PAGE.h1}</h1>`);
+  parts.push(`<p>${BTL_CASES_PAGE.intro}</p>`);
+  for (const caso of BTL_CASES) {
+    const services = caso.serviceSlugs
+      .map((slug) => getBtlService(slug))
+      .filter((s): s is BtlService => Boolean(s));
+    parts.push('<article>');
+    parts.push(`<h2>${caso.name}</h2>`);
+    parts.push(`<p><strong>${caso.projectType}</strong></p>`);
+    parts.push(`<p>${caso.description}</p>`);
+    if (caso.intermediaryNote) {
+      parts.push(`<p><em>${caso.intermediaryNote}</em></p>`);
+    }
+    if (services.length > 0) {
+      parts.push(
+        `<p>Servicios relacionados: ${services
+          .map((s) => `<a href="/agencia/${s.slug}">${s.shortName}</a>`)
+          .join(' · ')}</p>`,
+      );
+    }
+    if (caso.articleSlug) {
+      parts.push(`<p><a href="/blog/${caso.articleSlug}">Leer el caso completo</a></p>`);
+    }
+    parts.push('</article>');
+  }
+  parts.push(
+    `<p><a href="${waUrl}">Cotizar una campaña por WhatsApp: ${PHONE_DISPLAY}</a> · <a href="/agencia">Ver servicios BTL</a></p>`,
+  );
+  parts.push('<p>Charlitron Agencia — San Luis Potosí, México.</p>');
+  parts.push('</main>');
+  return parts.join('\n');
+}
+
 function buildSitemap(articles: ArticleWithCategory[]): string {
   const urls: string[] = [];
   const staticPages: Array<{ loc: string; priority: string }> = [
     { loc: `${SITE_URL}/`, priority: '1.0' },
     { loc: `${SITE_URL}/agencia`, priority: '0.9' },
+    { loc: `${SITE_URL}/agencia/casos`, priority: '0.8' },
     ...BTL_SERVICES.map((s) => ({ loc: `${SITE_URL}/agencia/${s.slug}`, priority: '0.9' })),
     { loc: `${SITE_URL}/blog`, priority: '0.8' },
   ];
@@ -541,6 +608,27 @@ async function main() {
   await writeFile(
     path.join(DIST_DIR, 'agencia', 'index.html'),
     injectBody(applyHead(template, agencyMeta), renderAgencyHubStatic()),
+    'utf8',
+  );
+
+  // /agencia/casos — colección de casos documentados (Fase 3A).
+  const casesDir = path.join(DIST_DIR, 'agencia', 'casos');
+  await mkdir(casesDir, { recursive: true });
+  const casesMeta: HeadMeta = {
+    title: BTL_CASES_PAGE.metaTitle,
+    description: BTL_CASES_PAGE.metaDescription,
+    canonical: `${SITE_URL}/agencia/casos`,
+    ogType: 'website',
+    ogImage: DEFAULT_SOCIAL_IMAGE,
+    ogImageAlt: DEFAULT_SOCIAL_IMAGE_ALT,
+    jsonLd: buildBtlCasesJsonLd(SITE_URL, BTL_CASES, {
+      name: BTL_CASES_PAGE.h1,
+      description: BTL_CASES_PAGE.metaDescription,
+    }),
+  };
+  await writeFile(
+    path.join(casesDir, 'index.html'),
+    injectBody(applyHead(template, casesMeta), renderBtlCasesStatic()),
     'utf8',
   );
 

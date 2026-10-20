@@ -15,13 +15,26 @@ export interface BtlFaq {
   answer: string;
 }
 
-/** Caso documentado enlazable desde una página de servicio (blog o texto). */
-export interface BtlCase {
-  title: string;
-  /** Ruta interna (ej. artículo del blog). Si falta, se muestra solo texto. */
-  href?: string;
-  /** Aclaración obligatoria cuando hubo agencia intermediaria u otro matiz. */
-  note?: string;
+/**
+ * Caso real/documentado de Charlitron Agencia. Fuente única de verdad: la
+ * página /agencia/casos y las páginas de servicio referencian este catálogo.
+ * Regla: nunca presentar como cliente directo si hubo agencia intermediaria
+ * (usar intermediaryNote, siempre visible junto al caso).
+ */
+export interface BtlCaseStudy {
+  id: string;
+  /** Nombre del caso (marca/proyecto). */
+  name: string;
+  /** Tipo de proyecto (ej. "Activación BTL y promoción en punto de venta"). */
+  projectType: string;
+  /** Descripción objetiva: sin métricas, ROI, ventas ni resultados inventados. */
+  description: string;
+  /** Slugs de BTL_SERVICES relacionados con el caso. */
+  serviceSlugs: string[];
+  /** Slug del artículo publicado en /blog (si existe). Nunca inventar URLs. */
+  articleSlug?: string;
+  /** Aclaración visible cuando la ejecución fue mediante agencia intermediaria. */
+  intermediaryNote?: string;
 }
 
 export interface BtlService {
@@ -43,8 +56,8 @@ export interface BtlService {
   whatsappMessage: string;
   /** Slugs de servicios hermanos para enlazado interno. */
   relatedSlugs: string[];
-  /** Casos documentados (redacción cuidadosa; nunca clientes directos si hubo intermediaria). */
-  casos?: BtlCase[];
+  /** IDs de BTL_CASES asociados al servicio. */
+  casos?: string[];
 }
 
 export const AGENCY_HUB = {
@@ -338,21 +351,7 @@ export const BTL_SERVICES: BtlService[] = [
       'perifoneo-san-luis-potosi',
       'ejecucion-local-agencias',
     ],
-    casos: [
-      {
-        title: 'Caso OXXO en San Luis Potosí: activación BTL',
-        href: '/blog/caso-oxxo-en-san-luis-potosi-activacion-btl-y-resultados-reales',
-      },
-      {
-        title: 'Activación navideña para RAC en San Luis Potosí',
-        href: '/blog/activacion-navidena-para-rac-en-san-luis-potosi-marketing-btl-familiar',
-      },
-      {
-        title: 'Caso Hellmann’s en San Luis Potosí: activación y promoción en punto de venta',
-        href: '/blog/caso-hellmann-s-en-san-luis-potosi-activacion-btl-y-promocion-en-punto-de-venta',
-        note: 'Ejecución realizada mediante agencia intermediaria.',
-      },
-    ],
+    casos: ['oxxo', 'rac', 'hellmanns'],
   },
   {
     slug: 'perifoneo-san-luis-potosi',
@@ -410,12 +409,7 @@ export const BTL_SERVICES: BtlService[] = [
       'activaciones-btl-san-luis-potosi',
       'ejecucion-local-agencias',
     ],
-    casos: [
-      {
-        title: 'Caso OXXO en San Luis Potosí: perifoneo y reclutamiento',
-        href: '/blog/caso-oxxo-en-san-luis-potosi-activacion-btl-y-resultados-reales',
-      },
-    ],
+    casos: ['oxxo'],
   },
   {
     slug: 'volanteo-san-luis-potosi',
@@ -529,14 +523,78 @@ export const BTL_SERVICES: BtlService[] = [
       'edecanes-san-luis-potosi',
       'ejecucion-local-agencias',
     ],
-    casos: [
-      {
-        title: 'Proyecto documental para Restaurante Galicia',
-      },
-    ],
+    casos: ['galicia'],
   },
 ];
 
 export function getBtlService(slug: string): BtlService | undefined {
   return BTL_SERVICES.find((s) => s.slug === slug);
+}
+
+// ============================================================================
+// Casos documentados — /agencia/casos (Fase 3A). Sin métricas inventadas;
+// las cifras publicadas viven únicamente en los artículos del blog enlazados.
+// ============================================================================
+
+export const BTL_CASES_PAGE = {
+  metaTitle: 'Casos de Activaciones BTL y Publicidad en San Luis Potosí | Charlitron',
+  metaDescription:
+    'Conoce casos documentados de Charlitron Agencia en activaciones BTL, perifoneo, promoción en punto de venta y producción audiovisual en San Luis Potosí.',
+  h1: 'Casos reales de campañas, activaciones y producción en San Luis Potosí',
+  intro:
+    'Estos son proyectos documentados de Charlitron Agencia en San Luis Potosí. Cuando existe un artículo público con el detalle, lo enlazamos; cuando la ejecución fue mediante una agencia intermediaria, lo aclaramos de forma visible.',
+  whatsappMessage:
+    'Hola Charlitron, vi sus casos y quiero cotizar una campaña en San Luis Potosí.',
+} as const;
+
+export const BTL_CASES: BtlCaseStudy[] = [
+  {
+    id: 'oxxo',
+    name: 'OXXO',
+    projectType: 'Activación BTL y promoción en punto de venta',
+    description:
+      'Activación BTL con promoción en punto de venta en San Luis Potosí, apoyada con perifoneo y reclutamiento de personal. El detalle y los resultados documentados del proyecto se narran en el artículo del caso.',
+    serviceSlugs: [
+      'activaciones-btl-san-luis-potosi',
+      'perifoneo-san-luis-potosi',
+      'promotores-san-luis-potosi',
+    ],
+    articleSlug: 'caso-oxxo-en-san-luis-potosi-activacion-btl-y-resultados-reales',
+  },
+  {
+    id: 'rac',
+    name: 'RAC',
+    projectType: 'Activación navideña con experiencia familiar',
+    description:
+      'Activación navideña orientada a familias en San Luis Potosí, con animación, personajes e interacción presencial.',
+    serviceSlugs: ['activaciones-btl-san-luis-potosi'],
+    articleSlug: 'activacion-navidena-para-rac-en-san-luis-potosi-marketing-btl-familiar',
+  },
+  {
+    id: 'hellmanns',
+    name: 'Hellmann’s',
+    projectType: 'Activación BTL y demostración de producto',
+    description:
+      'Activación BTL con promoción y demostración de producto en punto de venta en San Luis Potosí.',
+    serviceSlugs: [
+      'activaciones-btl-san-luis-potosi',
+      'demostradoras-san-luis-potosi',
+      'promotores-san-luis-potosi',
+    ],
+    articleSlug: 'caso-hellmann-s-en-san-luis-potosi-activacion-btl-y-promocion-en-punto-de-venta',
+    intermediaryNote:
+      'Ejecución realizada mediante agencia intermediaria; la relación comercial fue con la agencia, no directamente con la marca.',
+  },
+  {
+    id: 'galicia',
+    name: 'Restaurante Galicia',
+    projectType: 'Producción audiovisual · Documental empresarial',
+    description:
+      'Proyecto documental empresarial con entrevistas y testimonios, producido para Restaurante Galicia en San Luis Potosí.',
+    serviceSlugs: ['produccion-audiovisual-san-luis-potosi'],
+  },
+];
+
+export function getBtlCase(id: string): BtlCaseStudy | undefined {
+  return BTL_CASES.find((c) => c.id === id);
 }

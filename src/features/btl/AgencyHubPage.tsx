@@ -170,6 +170,25 @@ export const AgencyHubPage: React.FC = () => {
               })}
             </div>
 
+            <Link
+              to="/agencia/casos"
+              className="group mt-8 flex items-center justify-between gap-4 border border-amber-400/30 bg-[#101013] p-5 transition-colors hover:border-amber-400/60"
+            >
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-400">
+                  Casos documentados
+                </p>
+                <p className="mt-1 text-sm leading-6 text-zinc-300">
+                  OXXO, RAC, Hellmann’s (ejecución mediante agencia intermediaria) y documental para
+                  Restaurante Galicia.
+                </p>
+              </div>
+              <ArrowUpRight
+                className="h-5 w-5 shrink-0 text-amber-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </Link>
+
             <div className="mt-8 border border-zinc-800/80 bg-[#0e0e12] p-5">
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">
                 También operamos

@@ -2,7 +2,7 @@
 // y el script de prerender (scripts/prerender.ts) para que ambos emitan
 // exactamente el mismo structured data.
 import type { ArticleRow, FaqItem } from './database.types';
-import type { BtlService } from '../data/btl';
+import type { BtlCaseStudy, BtlService } from '../data/btl';
 import { CONTACT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, PHONE_DISPLAY } from '../data/content';
 
 export function buildArticleJsonLd(
@@ -188,4 +188,48 @@ export function buildBtlServiceJsonLd(service: BtlService, siteUrl: string): obj
     });
   }
   return graph;
+}
+
+// /agencia/casos: colección de casos documentados. ItemList enlaza al artículo
+// del blog SOLO cuando existe publicado (nunca URLs inventadas). Sin Review ni
+// AggregateRating: no hay reseñas ni métricas verificables en la página.
+export function buildBtlCasesJsonLd(
+  siteUrl: string,
+  cases: BtlCaseStudy[],
+  meta: { name: string; description: string },
+): object[] {
+  const url = `${siteUrl}/agencia/casos`;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      '@id': `${url}#page`,
+      name: meta.name,
+      description: meta.description,
+      url,
+      inLanguage: 'es-MX',
+      about: { '@id': `${siteUrl}/agencia#org` },
+    },
+    buildAgencyOrgNode(siteUrl),
+    buildBrandNode(siteUrl),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      itemListElement: cases.map((caso, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: `${caso.name} — ${caso.projectType}`,
+        ...(caso.articleSlug ? { url: `${siteUrl}/blog/${caso.articleSlug}` } : {}),
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Inicio', item: `${siteUrl}/` },
+        { '@type': 'ListItem', position: 2, name: 'Agencia BTL', item: `${siteUrl}/agencia` },
+        { '@type': 'ListItem', position: 3, name: 'Casos documentados', item: url },
+      ],
+    },
+  ];
 }
