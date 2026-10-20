@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { MessageCircle, Send, CheckCircle2, Phone, ShieldCheck, Mail } from 'lucide-react';
-import { PHONE_DISPLAY, CONTACT_EMAIL, createWhatsAppUrl } from '../data/content';
+import { MessageCircle, Send, CheckCircle2, Phone, ShieldCheck, Mail, Facebook, Instagram } from 'lucide-react';
+import { PHONE_DISPLAY, CONTACT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, createWhatsAppUrl } from '../data/content';
 
 export const ContactSection: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -114,6 +114,31 @@ export const ContactSection: React.FC = () => {
           >
             {CONTACT_EMAIL}
           </a>
+        </div>
+
+        {/* Social media links */}
+        <div className="mt-6 pt-6 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Síguenos:</span>
+          <div className="flex items-center gap-3">
+            <a
+              href={FACEBOOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-zinc-200 hover:border-amber-400/60 hover:text-amber-400 text-sm font-semibold transition-all"
+            >
+              <Facebook className="w-4 h-4 text-amber-400" />
+              <span>Facebook</span>
+            </a>
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-zinc-200 hover:border-amber-400/60 hover:text-amber-400 text-sm font-semibold transition-all"
+            >
+              <Instagram className="w-4 h-4 text-amber-400" />
+              <span>Instagram</span>
+            </a>
+          </div>
         </div>
       </div>
 

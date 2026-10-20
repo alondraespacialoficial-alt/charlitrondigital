@@ -3,6 +3,8 @@ import { ServiceItem, BusinessNeed, ShowcaseProject, WorkStep } from '../types';
 export const PHONE_DISPLAY = "444 423 70 92";
 export const PHONE_RAW = "524444237092";
 export const CONTACT_EMAIL = "nadrian18@gmail.com";
+export const FACEBOOK_URL = "https://www.facebook.com/charlitronagencia";
+export const INSTAGRAM_URL = "https://www.instagram.com/charlitron_agencia/";
 export const HERO_VIDEO_SRC = "/hero-video.mp4"; // Ruta local en /public o link directo (ej. https://...)
 
 export function createWhatsAppUrl(message: string): string {

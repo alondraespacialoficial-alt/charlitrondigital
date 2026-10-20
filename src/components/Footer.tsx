@@ -1,7 +1,7 @@
 import React from 'react';
 import { CharlitronLogo } from './CharlitronLogo';
-import { PHONE_DISPLAY, CONTACT_EMAIL, createWhatsAppUrl } from '../data/content';
-import { MessageCircle, Phone, Mail, ArrowUp, ShieldCheck } from 'lucide-react';
+import { PHONE_DISPLAY, CONTACT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, createWhatsAppUrl } from '../data/content';
+import { MessageCircle, Phone, Mail, ArrowUp, ShieldCheck, Facebook, Instagram } from 'lucide-react';
 import { LegalTab } from './LegalPage';
 
 interface FooterProps {
@@ -63,6 +63,28 @@ export const Footer: React.FC<FooterProps> = ({ onOpenLegal }) => {
           >
             <Phone className="w-3.5 h-3.5 text-zinc-400" />
             <span>Tel: {PHONE_DISPLAY}</span>
+          </a>
+
+          <a
+            href={FACEBOOK_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Facebook de Charlitron Digital"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-amber-400 hover:border-zinc-700 transition-colors"
+          >
+            <Facebook className="w-3.5 h-3.5 text-amber-400" />
+            <span>Facebook</span>
+          </a>
+
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram de Charlitron Digital"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-amber-400 hover:border-zinc-700 transition-colors"
+          >
+            <Instagram className="w-3.5 h-3.5 text-amber-400" />
+            <span>Instagram</span>
           </a>
         </div>
 
