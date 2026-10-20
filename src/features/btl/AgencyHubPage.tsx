@@ -5,10 +5,15 @@ import {
   Building2,
   ChevronRight,
   Download,
+  Hand,
+  Megaphone,
   MessageCircle,
+  Radio,
   Sparkles,
-  Users,
   UserCheck,
+  Users,
+  Video,
+  type LucideIcon,
 } from 'lucide-react';
 import { BtlLayout } from './BtlLayout';
 import { applyPageMeta } from '../../lib/seo';
@@ -17,7 +22,16 @@ import { SITE_URL } from '../../lib/site';
 import { AGENCY_HUB, BTL_SERVICES } from '../../data/btl';
 import { createWhatsAppUrl } from '../../data/content';
 
-const SERVICE_ICONS = [Users, UserCheck, Sparkles, Building2] as const;
+const SERVICE_ICONS: Record<string, LucideIcon> = {
+  'demostradoras-san-luis-potosi': Users,
+  'promotores-san-luis-potosi': UserCheck,
+  'edecanes-san-luis-potosi': Sparkles,
+  'ejecucion-local-agencias': Building2,
+  'activaciones-btl-san-luis-potosi': Megaphone,
+  'perifoneo-san-luis-potosi': Radio,
+  'volanteo-san-luis-potosi': Hand,
+  'produccion-audiovisual-san-luis-potosi': Video,
+};
 
 const agencyGallery = [
   'Gemini_Generated_Image_207yek207yek207y.jpg',
@@ -37,15 +51,9 @@ const agencyGallery = [
   'Gemini_Generated_Image_xzup1sxzup1sxzup.jpg',
 ];
 
-// Servicios BTL sin página propia todavía (Fase 2): se mencionan en el hub
-// para completar la oferta sin crear URLs vacías de contenido.
-const MORE_BTL_SERVICES = [
-  'Activaciones BTL',
-  'Perifoneo estratégico',
-  'Volanteo',
-  'Producción audiovisual',
-  'Contenido y campañas',
-];
+// Servicios BTL sin página propia todavía: se mencionan en el hub para
+// completar la oferta sin crear URLs vacías de contenido.
+const MORE_BTL_SERVICES = ['Contenido y campañas'];
 
 const hubWhatsApp = createWhatsAppUrl(AGENCY_HUB.whatsappMessage);
 
@@ -134,9 +142,9 @@ export const AgencyHubPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {BTL_SERVICES.map((service, index) => {
-                const Icon = SERVICE_ICONS[index % SERVICE_ICONS.length];
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {BTL_SERVICES.map((service) => {
+                const Icon = SERVICE_ICONS[service.slug] ?? Users;
                 return (
                   <Link
                     key={service.slug}

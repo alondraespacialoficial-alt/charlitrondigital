@@ -15,6 +15,15 @@ export interface BtlFaq {
   answer: string;
 }
 
+/** Caso documentado enlazable desde una página de servicio (blog o texto). */
+export interface BtlCase {
+  title: string;
+  /** Ruta interna (ej. artículo del blog). Si falta, se muestra solo texto. */
+  href?: string;
+  /** Aclaración obligatoria cuando hubo agencia intermediaria u otro matiz. */
+  note?: string;
+}
+
 export interface BtlService {
   slug: string;
   /** Nombre corto para tarjetas y enlaces. */
@@ -34,6 +43,8 @@ export interface BtlService {
   whatsappMessage: string;
   /** Slugs de servicios hermanos para enlazado interno. */
   relatedSlugs: string[];
+  /** Casos documentados (redacción cuidadosa; nunca clientes directos si hubo intermediaria). */
+  casos?: BtlCase[];
 }
 
 export const AGENCY_HUB = {
@@ -267,6 +278,261 @@ export const BTL_SERVICES: BtlService[] = [
       'demostradoras-san-luis-potosi',
       'promotores-san-luis-potosi',
       'edecanes-san-luis-potosi',
+    ],
+  },
+  // ===================== Fase 2 =====================
+  {
+    slug: 'activaciones-btl-san-luis-potosi',
+    shortName: 'Activaciones BTL',
+    serviceType: 'Activaciones de marca y BTL',
+    metaTitle: 'Activaciones BTL en San Luis Potosí | Charlitron Agencia',
+    metaDescription:
+      'Activaciones BTL en San Luis Potosí para marcas, tiendas y lanzamientos. Dinámicas promocionales, personal e interacción con el público según el alcance contratado.',
+    h1: 'Activaciones de marca y BTL en San Luis Potosí',
+    intro:
+      'Llevamos tu marca frente al público con activaciones planeadas según el objetivo de tu campaña: dinámicas promocionales, personal promocional e interacción directa en el punto que elijas.',
+    queIncluye: [
+      'Planeación de dinámicas comerciales acordes a tu campaña',
+      'Personal promocional para la activación',
+      'Animación e interacción con el público',
+      'Juegos e incentivos según la campaña',
+      'Apoyo en instalaciones y materiales según cotización',
+      'Perifoneo o volanteo solo cuando se contraten como parte de la campaña',
+      'Documentación operativa únicamente cuando se acuerde',
+    ],
+    usos: [
+      'Lanzamientos de producto',
+      'Promociones en tienda y punto de venta',
+      'Activaciones en plazas y zonas comerciales',
+      'Campañas de temporada',
+    ],
+    cobertura:
+      'San Luis Potosí capital y zona metropolitana. Otras ubicaciones dentro del estado se evalúan por proyecto.',
+    proceso: [
+      'Nos compartes el objetivo, la fecha y el punto de la activación',
+      'Proponemos la dinámica, el personal y los materiales necesarios',
+      'Definimos alcance, cotización y logística por escrito',
+      'Ejecutamos la activación en campo',
+    ],
+    faqs: [
+      {
+        question: '¿Qué incluye una activación BTL?',
+        answer:
+          'Depende del objetivo de tu campaña: dinámicas promocionales, personal promocional, animación e interacción con el público, juegos e incentivos. El apoyo en instalaciones y materiales se cotiza según el alcance.',
+      },
+      {
+        question: '¿La activación incluye perifoneo o volanteo?',
+        answer:
+          'Solo cuando se contraten como parte de la campaña. Pueden sumarse a la activación o contratarse como servicios independientes.',
+      },
+      {
+        question: '¿Entregan documentación o evidencia de la activación?',
+        answer:
+          'La documentación operativa (fotografías, reportes u otros formatos) se entrega únicamente cuando se acuerda como parte del alcance contratado.',
+      },
+    ],
+    whatsappMessage:
+      'Hola Charlitron, quiero cotizar una activación BTL en San Luis Potosí.',
+    relatedSlugs: [
+      'demostradoras-san-luis-potosi',
+      'perifoneo-san-luis-potosi',
+      'ejecucion-local-agencias',
+    ],
+    casos: [
+      {
+        title: 'Caso OXXO en San Luis Potosí: activación BTL',
+        href: '/blog/caso-oxxo-en-san-luis-potosi-activacion-btl-y-resultados-reales',
+      },
+      {
+        title: 'Activación navideña para RAC en San Luis Potosí',
+        href: '/blog/activacion-navidena-para-rac-en-san-luis-potosi-marketing-btl-familiar',
+      },
+      {
+        title: 'Caso Hellmann’s en San Luis Potosí: activación y promoción en punto de venta',
+        href: '/blog/caso-hellmann-s-en-san-luis-potosi-activacion-btl-y-promocion-en-punto-de-venta',
+        note: 'Ejecución realizada mediante agencia intermediaria.',
+      },
+    ],
+  },
+  {
+    slug: 'perifoneo-san-luis-potosi',
+    shortName: 'Perifoneo estratégico',
+    serviceType: 'Perifoneo publicitario estratégico',
+    metaTitle: 'Perifoneo Estratégico en San Luis Potosí | Charlitron Agencia',
+    metaDescription:
+      'Perifoneo en San Luis Potosí para promociones, aperturas, reclutamiento y campañas locales. Planeación de rutas y mensajes adaptados al objetivo del servicio.',
+    h1: 'Perifoneo publicitario estratégico en San Luis Potosí',
+    intro:
+      'Difusión móvil con planeación: definimos contigo las rutas, las zonas y el mensaje según el objetivo de tu campaña, para que tu publicidad se escuche donde está tu público.',
+    queIncluye: [
+      'Difusión móvil con audio publicitario',
+      'Planeación de rutas y zonas según tu público y objetivo',
+      'Adaptación del mensaje al objetivo del servicio',
+      'Apoyo a activaciones cuando se contrata junto con ellas',
+      'Monitoreo operativo únicamente según el servicio contratado',
+    ],
+    usos: [
+      'Promociones y ofertas locales',
+      'Aperturas de negocio',
+      'Reclutamiento de personal',
+      'Campañas por colonia o zona',
+      'Refuerzo de activaciones BTL',
+    ],
+    cobertura:
+      'San Luis Potosí capital y zona metropolitana. Otras ubicaciones dentro del estado se evalúan por proyecto.',
+    proceso: [
+      'Nos cuentas qué quieres difundir y a qué zona o público va dirigido',
+      'Planeamos rutas, horarios y el mensaje del perifoneo',
+      'Confirmamos fechas y alcance por escrito',
+      'Salimos a ruta según lo planeado',
+    ],
+    faqs: [
+      {
+        question: '¿Qué tipo de mensajes puedo difundir?',
+        answer:
+          'Promociones, aperturas, reclutamiento de personal y actividades comerciales. Adaptamos el mensaje al objetivo de tu servicio.',
+      },
+      {
+        question: '¿Cómo eligen las rutas del perifoneo?',
+        answer:
+          'Las planeamos contigo según tu público y tu objetivo: colonias, zonas comerciales, cruceros o rutas específicas de la ciudad y la zona metropolitana.',
+      },
+      {
+        question: '¿El servicio incluye monitoreo?',
+        answer:
+          'El monitoreo operativo se realiza únicamente cuando forma parte del servicio contratado. Lo definimos por escrito antes de iniciar.',
+      },
+    ],
+    whatsappMessage:
+      'Hola Charlitron, quiero cotizar perifoneo en San Luis Potosí.',
+    relatedSlugs: [
+      'volanteo-san-luis-potosi',
+      'activaciones-btl-san-luis-potosi',
+      'ejecucion-local-agencias',
+    ],
+    casos: [
+      {
+        title: 'Caso OXXO en San Luis Potosí: perifoneo y reclutamiento',
+        href: '/blog/caso-oxxo-en-san-luis-potosi-activacion-btl-y-resultados-reales',
+      },
+    ],
+  },
+  {
+    slug: 'volanteo-san-luis-potosi',
+    shortName: 'Volanteo',
+    serviceType: 'Volanteo y distribución publicitaria',
+    metaTitle: 'Volanteo en San Luis Potosí | Charlitron Agencia',
+    metaDescription:
+      'Volanteo en San Luis Potosí para promociones, aperturas y campañas locales. Distribución dirigida por zonas y personal de reparto según el alcance contratado.',
+    h1: 'Volanteo y distribución publicitaria en San Luis Potosí',
+    intro:
+      'Tu publicidad, directo en las manos de tu público. Organizamos el reparto con personal y una planeación de puntos y zonas dirigida según tu campaña.',
+    queIncluye: [
+      'Personal para el reparto de volantes y material publicitario',
+      'Planeación de puntos y zonas de distribución',
+      'Distribución dirigida según tu público objetivo',
+      'Supervisión o evidencia únicamente cuando formen parte del servicio contratado',
+    ],
+    usos: [
+      'Promociones y descuentos',
+      'Aperturas de negocio',
+      'Campañas locales por colonia o zona',
+      'Apoyo a activaciones y eventos',
+    ],
+    cobertura:
+      'San Luis Potosí capital y zona metropolitana. Otras ubicaciones dentro del estado se evalúan por proyecto.',
+    proceso: [
+      'Nos compartes tu campaña, tu público y tus fechas',
+      'Planeamos puntos, zonas y cantidad de personal',
+      'Definimos alcance y cotización por escrito',
+      'Ejecutamos el reparto en los puntos acordados',
+    ],
+    faqs: [
+      {
+        question: '¿En qué zonas pueden repartir?',
+        answer:
+          'Planeamos los puntos contigo: plazas, cruceros, colonias o zonas comerciales de San Luis Potosí capital y zona metropolitana.',
+      },
+      {
+        question: '¿Ustedes producen el material impreso?',
+        answer:
+          'La producción del material se define en la cotización según el alcance; también puedes proporcionarlo tú y nosotros lo distribuimos.',
+      },
+      {
+        question: '¿El reparto incluye supervisión o evidencia?',
+        answer:
+          'La supervisión y la evidencia (fotográfica o de otro tipo) se incluyen únicamente cuando forman parte del servicio contratado.',
+      },
+    ],
+    whatsappMessage:
+      'Hola Charlitron, quiero cotizar un servicio de volanteo en San Luis Potosí.',
+    relatedSlugs: [
+      'perifoneo-san-luis-potosi',
+      'activaciones-btl-san-luis-potosi',
+      'promotores-san-luis-potosi',
+    ],
+  },
+  {
+    slug: 'produccion-audiovisual-san-luis-potosi',
+    shortName: 'Producción audiovisual',
+    serviceType: 'Producción audiovisual y videos para empresas',
+    metaTitle: 'Producción Audiovisual en San Luis Potosí | Charlitron',
+    metaDescription:
+      'Producción audiovisual en San Luis Potosí: videos empresariales, promocionales, entrevistas y testimonios. Grabación, edición y narrativa según las necesidades del proyecto.',
+    h1: 'Producción audiovisual y videos para empresas en San Luis Potosí',
+    intro:
+      'Videos que cuentan bien tu historia: planeamos, grabamos y editamos contenido audiovisual para empresas, con narrativa adaptada a las necesidades de tu proyecto.',
+    queIncluye: [
+      'Planeación audiovisual según el objetivo del proyecto',
+      'Videos corporativos y promocionales',
+      'Entrevistas y testimonios',
+      'Edición de video',
+      'Narración y musicalización según proyecto',
+      'Grabación con dron solo cuando se acuerde y sea viable',
+      'Adaptación a formatos digitales según alcance',
+    ],
+    usos: [
+      'Video empresarial para tu sitio web y presentaciones',
+      'Promocionales para campañas y redes sociales',
+      'Entrevistas y testimonios de clientes',
+      'Documentales de marca',
+    ],
+    cobertura:
+      'San Luis Potosí capital y zona metropolitana. Otras ubicaciones dentro del estado se evalúan por proyecto.',
+    proceso: [
+      'Nos cuentas qué quieres comunicar y a qué audiencia',
+      'Proponemos el enfoque, el formato y la planeación de la producción',
+      'Definimos alcance, entregables y cotización por escrito',
+      'Grabamos y editamos según lo acordado',
+    ],
+    faqs: [
+      {
+        question: '¿Qué tipo de videos producen?',
+        answer:
+          'Videos empresariales y promocionales, entrevistas, testimonios y documentales de marca. La narrativa y el formato se definen según las necesidades de tu proyecto.',
+      },
+      {
+        question: '¿Incluyen grabación con dron?',
+        answer:
+          'Solo cuando se acuerda dentro del proyecto y es viable en la ubicación. Lo evaluamos juntos antes de confirmarlo.',
+      },
+      {
+        question: '¿Entregan versiones para redes sociales?',
+        answer:
+          'La adaptación a formatos digitales (verticales, cortos, versiones por plataforma) se define según el alcance del proyecto.',
+      },
+    ],
+    whatsappMessage:
+      'Hola Charlitron, quiero cotizar un video empresarial en San Luis Potosí.',
+    relatedSlugs: [
+      'activaciones-btl-san-luis-potosi',
+      'edecanes-san-luis-potosi',
+      'ejecucion-local-agencias',
+    ],
+    casos: [
+      {
+        title: 'Proyecto documental para Restaurante Galicia',
+      },
     ],
   },
 ];
