@@ -64,7 +64,17 @@ const DIST_DIR = path.resolve(process.cwd(), 'dist');
 
 type ArticleWithCategory = ArticleRow & {
   categories?: Pick<CategoryRow, 'name' | 'slug'> | null;
+  // Relaciones N:M con servicios BTL (migración 0002). Si la tabla aún no
+  // existe en el proyecto, el fetch reintenta sin el embed y queda vacío.
+  article_btl_services?: { service_slug: string }[] | null;
 };
+
+// Slugs de servicios BTL de un artículo, filtrados contra el catálogo vigente.
+function articleServiceSlugs(article: ArticleWithCategory): string[] {
+  return (article.article_btl_services ?? [])
+    .map((r) => r.service_slug)
+    .filter((slug) => Boolean(getBtlService(slug)));
+}
 
 function escapeHtmlAttr(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -216,6 +226,22 @@ function renderArticleStatic(article: ArticleWithCategory): string {
     );
   }
   parts.push(renderMarkdownLite(article.content));
+  // Servicios BTL relacionados (visibles → también alimentan mentions del
+  // JSON-LD del artículo).
+  const linkedServices = articleServiceSlugs(article)
+    .map((s) => getBtlService(s))
+    .filter((s): s is BtlService => Boolean(s));
+  if (linkedServices.length > 0) {
+    parts.push('<h2>Servicios relacionados</h2>');
+    parts.push(
+      `<ul>${linkedServices
+        .map(
+          (s) =>
+            `<li><a href="/agencia/${s.slug}">${s.shortName} — ${s.serviceType} en San Luis Potosí</a></li>`,
+        )
+        .join('')}</ul>`,
+    );
+  }
   if (article.cta_text && article.cta_url) {
     parts.push(`<p><a href="${escapeHtmlAttr(article.cta_url)}">${article.cta_text}</a></p>`);
   }
@@ -380,8 +406,12 @@ function renderAgencyHubStatic(): string {
 }
 
 // /agencia/<slug>: ficha estática de cada servicio BTL (con FAQs visibles,
-// requisito para el FAQPage del JSON-LD).
-function renderBtlServiceStatic(service: BtlService): string {
+// requisito para el FAQPage del JSON-LD). Incluye los artículos publicados
+// relacionados (migración 0002), si los hay.
+function renderBtlServiceStatic(
+  service: BtlService,
+  relatedArticles: ArticleWithCategory[] = [],
+): string {
   const waUrl = createWhatsAppUrl(service.whatsappMessage);
   const related = service.relatedSlugs
     .map((slug) => BTL_SERVICES.find((s) => s.slug === slug))
@@ -430,6 +460,17 @@ function renderBtlServiceStatic(service: BtlService): string {
         '<p><a href="/agencia/casos">Ver todos los casos documentados de Charlitron Agencia</a></p>',
       );
     }
+  }
+  if (relatedArticles.length > 0) {
+    parts.push('<h2>Artículos relacionados</h2>');
+    parts.push(
+      `<ul>${relatedArticles
+        .map(
+          (a) =>
+            `<li><a href="/blog/${a.slug}">${a.title}</a>${a.excerpt ? ` — ${a.excerpt}` : ''}</li>`,
+        )
+        .join('')}</ul>`,
+    );
   }
   parts.push('<h2>Servicios relacionados</h2>');
   parts.push(
@@ -516,15 +557,27 @@ ${urls.join('\n')}
 }
 
 async function fetchPublishedArticles(): Promise<ArticleWithCategory[]> {
-  const select =
+  const headers = {
+    apikey: SUPABASE_ANON_KEY!,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+  const buildUrl = (select: string) =>
+    `${SUPABASE_URL}/rest/v1/articles?select=${encodeURIComponent(select)}&status=eq.published&order=published_at.desc`;
+  const baseSelect =
     'title,slug,excerpt,content,cover_image_url,cover_thumb_url,cover_alt,author_name,status,meta_title,meta_description,faq,cta_text,cta_url,published_at,updated_at,category_id,categories(name,slug)';
-  const url = `${SUPABASE_URL}/rest/v1/articles?select=${encodeURIComponent(select)}&status=eq.published&order=published_at.desc`;
-  const response = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY!,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
+
+  // Intento 1: con embed de servicios BTL (requiere la migración 0002
+  // aplicada). Si la tabla aún no existe, reintento sin el embed: el blog y
+  // las páginas BTL se generan igual, solo sin las secciones de relaciones.
+  let response = await fetch(buildUrl(`${baseSelect},article_btl_services(service_slug)`), {
+    headers,
   });
+  if (!response.ok) {
+    console.warn(
+      '[prerender] embed article_btl_services no disponible; continúo sin relaciones.',
+    );
+    response = await fetch(buildUrl(baseSelect), { headers });
+  }
   if (!response.ok) {
     throw new Error(`Supabase REST respondió ${response.status}: ${await response.text()}`);
   }
@@ -584,7 +637,13 @@ async function main() {
       ogImageWidth: hasCover ? 1600 : 1200,
       ogImageHeight: hasCover ? 900 : 630,
       publishedTime: article.published_at,
-      jsonLd: buildArticleJsonLd(article, article.categories?.name, SITE_URL, SITE_NAME),
+      jsonLd: buildArticleJsonLd(
+        article,
+        article.categories?.name,
+        SITE_URL,
+        SITE_NAME,
+        articleServiceSlugs(article),
+      ),
     };
     await writeFile(
       path.join(dir, 'index.html'),
@@ -636,6 +695,11 @@ async function main() {
   for (const service of BTL_SERVICES) {
     const dir = path.join(DIST_DIR, 'agencia', service.slug);
     await mkdir(dir, { recursive: true });
+    // Artículos publicados relacionados con este servicio (mapa inverso del
+    // embed; cero queries extra).
+    const serviceArticles = articles.filter((a) =>
+      articleServiceSlugs(a).includes(service.slug),
+    );
     const meta: HeadMeta = {
       title: service.metaTitle,
       description: service.metaDescription,
@@ -647,7 +711,7 @@ async function main() {
     };
     await writeFile(
       path.join(dir, 'index.html'),
-      injectBody(applyHead(template, meta), renderBtlServiceStatic(service)),
+      injectBody(applyHead(template, meta), renderBtlServiceStatic(service, serviceArticles)),
       'utf8',
     );
   }

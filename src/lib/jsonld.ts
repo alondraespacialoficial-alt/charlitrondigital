@@ -10,6 +10,7 @@ export function buildArticleJsonLd(
   categoryName: string | null | undefined,
   siteUrl: string,
   siteName: string,
+  serviceSlugs: string[] = [],
 ): object[] {
   const url = `${siteUrl}/blog/${article.slug}`;
   const graph: object[] = [
@@ -30,6 +31,15 @@ export function buildArticleJsonLd(
       dateModified: article.updated_at,
       articleSection: categoryName ?? undefined,
       inLanguage: 'es-MX',
+      // mentions → Service @id SOLO cuando los servicios relacionados están
+      // visibles en la página (bloque "Servicios relacionados").
+      ...(serviceSlugs.length > 0
+        ? {
+            mentions: serviceSlugs.map((s) => ({
+              '@id': `${siteUrl}/agencia/${s}#service`,
+            })),
+          }
+        : {}),
     },
     {
       '@context': 'https://schema.org',

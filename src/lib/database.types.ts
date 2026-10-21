@@ -64,6 +64,14 @@ export type ArticleSourceRow = {
   created_at: string;
 };
 
+// Relación N:M artículos ↔ servicios BTL (migración 0002). El slug referencia
+// el catálogo en código (src/data/btl.ts), no una tabla en DB.
+export type ArticleBtlServiceRow = {
+  article_id: string;
+  service_slug: string;
+  created_at: string;
+};
+
 export type PageViewInsert = {
   path: string;
   article_slug?: string | null;
@@ -121,6 +129,21 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'article_sources_article_id_fkey';
+            columns: ['article_id'];
+            isOneToOne: false;
+            referencedRelation: 'articles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      article_btl_services: {
+        Row: ArticleBtlServiceRow;
+        Insert: Pick<ArticleBtlServiceRow, 'article_id' | 'service_slug'> &
+          Partial<ArticleBtlServiceRow>;
+        Update: Partial<Pick<ArticleBtlServiceRow, 'service_slug'>>;
+        Relationships: [
+          {
+            foreignKeyName: 'article_btl_services_article_id_fkey';
             columns: ['article_id'];
             isOneToOne: false;
             referencedRelation: 'articles';

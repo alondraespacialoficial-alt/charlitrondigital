@@ -3,12 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, ExternalLink, HelpCircle } from 'lucide-react';
 import { BlogShell } from './BlogShell';
 import { ShareArticle } from './ShareArticle';
-import { getPublishedArticleBySlug, listArticleSources } from './api';
+import { getPublishedArticleBySlug, listArticleServiceSlugs, listArticleSources } from './api';
 import type { ArticleRow, ArticleSourceRow, CategoryRow, FaqItem } from '../../lib/database.types';
 import { applyPageMeta, articleJsonLd } from '../../lib/seo';
 import { renderMarkdownLite } from '../../lib/markdown';
 import { trackPageView } from '../../lib/analytics';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
+import { getBtlService } from '../../data/btl';
 
 type ArticleWithCategory = ArticleRow & { categories?: Pick<CategoryRow, 'name' | 'slug'> | null };
 
@@ -23,6 +24,7 @@ export const BlogPostPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<ArticleWithCategory | null>(null);
   const [sources, setSources] = useState<ArticleSourceRow[]>([]);
+  const [serviceSlugs, setServiceSlugs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -38,10 +40,22 @@ export const BlogPostPage: React.FC = () => {
         setArticle(data);
         const articleSources = await listArticleSources(data.id).catch(() => []);
         setSources(articleSources);
+        // Relaciones con servicios BTL (migración 0002; [] si no existe aún).
+        const relSlugs = await listArticleServiceSlugs(data.id).catch(() => []);
+        setServiceSlugs(relSlugs);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Solo slugs válidos del catálogo (visibles en el bloque) alimentan mentions.
+  const relatedServices = useMemo(
+    () =>
+      serviceSlugs
+        .map((s) => getBtlService(s))
+        .filter((s): s is NonNullable<typeof s> => Boolean(s)),
+    [serviceSlugs],
+  );
 
   useEffect(() => {
     if (!article) return;
@@ -58,10 +72,10 @@ export const BlogPostPage: React.FC = () => {
         ogType: 'article',
         publishedTime: article.published_at,
       },
-      articleJsonLd(article, article.categories?.name),
+      articleJsonLd(article, article.categories?.name, relatedServices.map((s) => s.slug)),
     );
     trackPageView(`/blog/${article.slug}`, article.slug);
-  }, [article]);
+  }, [article, relatedServices]);
 
   const contentHtml = useMemo(
     () => (article ? renderMarkdownLite(article.content) : ''),
@@ -185,6 +199,23 @@ export const BlogPostPage: React.FC = () => {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {relatedServices.length > 0 && (
+          <section className="mt-12 border-t border-zinc-800 pt-8">
+            <h2 className="text-xl font-bold text-white mb-4">Servicios relacionados</h2>
+            <div className="flex flex-wrap gap-2">
+              {relatedServices.map((service) => (
+                <Link
+                  key={service.slug}
+                  to={`/agencia/${service.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-amber-400/60 hover:text-amber-300"
+                >
+                  {service.shortName} en San Luis Potosí
+                </Link>
+              ))}
+            </div>
           </section>
         )}
 
