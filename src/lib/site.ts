@@ -1,7 +1,7 @@
 // Configuración del sitio. El dominio canónico se controla con VITE_SITE_URL
 // (configurar en Vercel). Fallback al dominio de producción del proyecto.
 export const SITE_URL = (
-  import.meta.env.VITE_SITE_URL ?? 'https://charlitrondigital.vercel.app'
+  import.meta.env.VITE_SITE_URL ?? 'https://www.charlitrondigital.com'
 ).replace(/\/$/, '');
 
 export const SITE_NAME = 'Charlitron Digital';

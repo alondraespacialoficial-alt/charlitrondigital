@@ -21,6 +21,7 @@ import {
   buildBlogJsonLd,
   buildBtlCasesJsonLd,
   buildBtlServiceJsonLd,
+  buildPortfolioProjectJsonLd,
 } from '../src/lib/jsonld';
 import type { ArticleRow, CategoryRow } from '../src/lib/database.types';
 import {
@@ -39,17 +40,21 @@ import {
   CONTACT_EMAIL,
   PHONE_DISPLAY,
   SERVICES_LIST,
-  SHOWCASE_PROJECTS,
   WORK_STEPS,
   createWhatsAppUrl,
 } from '../src/data/content';
+import {
+  CONCEPT_SOLUTIONS,
+  PROJECTS,
+  PROJECT_FEATURE_STATUS_LABELS,
+} from '../src/data/projects';
 
 // En local carga .env.local / .env; en Vercel las vars ya vienen en process.env.
 loadEnv({ path: ['.env.local', '.env'] });
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
-const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://charlitrondigital.vercel.app').replace(
+const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://www.charlitrondigital.com').replace(
   /\/$/,
   '',
 );
@@ -321,14 +326,24 @@ function renderHomeStatic(): string {
 
   // Evidencia (EvidenceSection + SHOWCASE_PROJECTS)
   parts.push('<section id="evidencia">');
-  parts.push('<h2>No solo entregamos trabajo. Generamos impacto real.</h2>');
+  parts.push('<h2>Proyectos de Charlitron Digital</h2>');
   parts.push(
-    '<p>Soluciones vivas, operativas y pensadas para negocios que quieren más orden, más ventas y menos fricción en cada proceso.</p>',
+    '<h3>Software y plataformas</h3>',
   );
   parts.push(
-    `<ul>${SHOWCASE_PROJECTS.map(
-      (p) => `<li><strong>${p.title}</strong> — ${p.subtitle}. ${p.description}</li>`,
+    `<ul>${PROJECTS.filter((project) => project.group === 'software').map(
+      (project) => `<li><a href="/proyectos/${project.slug}"><strong>${project.title}</strong></a> — ${project.summary}</li>`,
     ).join('')}</ul>`,
+  );
+  parts.push('<h3>Experiencias digitales e IA</h3>');
+  parts.push(
+    `<ul>${PROJECTS.filter((project) => project.group === 'experience').map(
+      (project) => `<li><a href="/proyectos/${project.slug}"><strong>${project.title}</strong></a> — ${project.summary}</li>`,
+    ).join('')}</ul>`,
+  );
+  parts.push('<h3>Soluciones conceptuales</h3>');
+  parts.push(
+    `<ul>${CONCEPT_SOLUTIONS.map((solution) => `<li><strong>${solution.title}</strong> — ${solution.description}</li>`).join('')}</ul>`,
   );
   parts.push('</section>');
 
@@ -529,6 +544,71 @@ function renderBtlCasesStatic(): string {
   return parts.join('\n');
 }
 
+function renderProjectStatic(project: (typeof PROJECTS)[number]): string {
+  const whatsappUrl = createWhatsAppUrl(project.whatsappMessage);
+  const parts: string[] = [];
+  parts.push('<main style="max-width:64rem;margin:0 auto;padding:3rem 1rem;font-family:sans-serif;">');
+  parts.push(
+    `<nav><a href="/">Inicio</a> › <a href="/#evidencia">Proyectos</a> › <strong>${project.title}</strong></nav>`,
+  );
+  parts.push(`<p>${project.group === 'software' ? 'Software y plataformas' : 'Experiencias digitales e IA'}</p>`);
+  parts.push(`<h1>${project.title}</h1>`);
+  parts.push(`<p>${project.summary}</p>`);
+  parts.push(
+    `<p><a href="${escapeHtmlAttr(project.officialUrl)}">Ver sitio oficial</a> · <a href="${whatsappUrl}">Quiero algo similar por WhatsApp</a></p>`,
+  );
+  parts.push('<h2>Problema que atiende</h2>');
+  parts.push(`<p>${project.problem}</p>`);
+  parts.push('<h2>Solución desarrollada</h2>');
+  parts.push(`<p>${project.solution}</p>`);
+  parts.push('<h2>Capacidades y estado</h2>');
+  if (project.features.length > 0) {
+    parts.push(
+      `<ul>${project.features
+        .map(
+          (feature) =>
+            `<li><strong>${feature.name}</strong> — ${PROJECT_FEATURE_STATUS_LABELS[feature.status]}${
+              feature.description ? `. ${feature.description}` : ''
+            }</li>`,
+        )
+        .join('')}</ul>`,
+    );
+  } else {
+    parts.push('<p>Las funciones específicas se añadirán cuando se validen y haya evidencia autorizada para publicarlas.</p>');
+  }
+  for (const section of project.sections ?? []) {
+    parts.push(`<h2>${section.title}</h2>`);
+    parts.push(`<p>${section.description}</p>`);
+    parts.push(
+      `<ul>${section.features
+        .map(
+          (feature) =>
+            `<li><strong>${feature.name}</strong> — ${PROJECT_FEATURE_STATUS_LABELS[feature.status]}${
+              feature.description ? `. ${feature.description}` : ''
+            }</li>`,
+        )
+        .join('')}</ul>`,
+    );
+  }
+  parts.push('<h2>Evidencias del proyecto</h2>');
+  if (project.images?.length) {
+    parts.push(
+      project.images
+        .map(
+          (image) =>
+            `<figure><img src="${escapeHtmlAttr(image.src)}" alt="${escapeHtmlAttr(image.alt)}" loading="lazy" decoding="async" width="${image.width}" height="${image.height}" /><figcaption>${image.alt}</figcaption></figure>`,
+        )
+        .join('\n'),
+    );
+  } else {
+    parts.push('<p>Captura auténtica autorizada pendiente.</p>');
+  }
+  parts.push(`<p><a href="${whatsappUrl}">Quiero algo similar</a></p>`);
+  parts.push('<p><a href="/#evidencia">Volver al portafolio</a></p>');
+  parts.push('</main>');
+  return parts.join('\n');
+}
+
 function buildSitemap(articles: ArticleWithCategory[]): string {
   const urls: string[] = [];
   const staticPages: Array<{ loc: string; priority: string }> = [
@@ -537,6 +617,10 @@ function buildSitemap(articles: ArticleWithCategory[]): string {
     { loc: `${SITE_URL}/agencia/casos`, priority: '0.8' },
     ...BTL_SERVICES.map((s) => ({ loc: `${SITE_URL}/agencia/${s.slug}`, priority: '0.9' })),
     { loc: `${SITE_URL}/blog`, priority: '0.8' },
+    ...PROJECTS.map((project) => ({
+      loc: `${SITE_URL}/proyectos/${project.slug}`,
+      priority: '0.7',
+    })),
   ];
   for (const page of staticPages) {
     urls.push(`  <url><loc>${escapeXml(page.loc)}</loc><priority>${page.priority}</priority></url>`);
@@ -712,6 +796,31 @@ async function main() {
     await writeFile(
       path.join(dir, 'index.html'),
       injectBody(applyHead(template, meta), renderBtlServiceStatic(service, serviceArticles)),
+      'utf8',
+    );
+  }
+
+  // Páginas individuales del portafolio (independientes del blog y BTL).
+  for (const project of PROJECTS) {
+    const dir = path.join(DIST_DIR, 'proyectos', project.slug);
+    await mkdir(dir, { recursive: true });
+    const projectImage = project.images?.[0];
+    const meta: HeadMeta = {
+      title: project.metaTitle,
+      description: project.metaDescription,
+      canonical: `${SITE_URL}/proyectos/${project.slug}`,
+      ogType: 'website',
+      ogImage: projectImage
+        ? projectImage.src.startsWith('http')
+          ? projectImage.src
+          : `${SITE_URL}${projectImage.src.startsWith('/') ? '' : '/'}${projectImage.src}`
+        : DEFAULT_SOCIAL_IMAGE,
+      ogImageAlt: projectImage?.alt ?? DEFAULT_SOCIAL_IMAGE_ALT,
+      jsonLd: buildPortfolioProjectJsonLd(project, SITE_URL),
+    };
+    await writeFile(
+      path.join(dir, 'index.html'),
+      injectBody(applyHead(template, meta), renderProjectStatic(project)),
       'utf8',
     );
   }

@@ -3,6 +3,7 @@
 // exactamente el mismo structured data.
 import type { ArticleRow, FaqItem } from './database.types';
 import type { BtlCaseStudy, BtlService } from '../data/btl';
+import type { PortfolioProject } from '../data/projects';
 import { CONTACT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, PHONE_DISPLAY } from '../data/content';
 
 export function buildArticleJsonLd(
@@ -75,6 +76,30 @@ export function buildBlogJsonLd(siteUrl: string, siteName: string): object {
     url: `${siteUrl}/blog`,
     inLanguage: 'es-MX',
   };
+}
+
+export function buildPortfolioProjectJsonLd(project: PortfolioProject, siteUrl: string): object[] {
+  const url = `${siteUrl}/proyectos/${project.slug}`;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CreativeWork',
+      '@id': `${url}#project`,
+      name: project.title,
+      description: project.summary,
+      url,
+      inLanguage: 'es-MX',
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Inicio', item: `${siteUrl}/` },
+        { '@type': 'ListItem', position: 2, name: 'Proyectos', item: `${siteUrl}/#evidencia` },
+        { '@type': 'ListItem', position: 3, name: project.title, item: url },
+      ],
+    },
+  ];
 }
 
 // ============================================================================
