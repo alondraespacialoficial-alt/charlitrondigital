@@ -14,6 +14,7 @@
 // ============================================================================
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { isPortfolioPreviewEnvironment } from '../scripts/portfolioPreviewPolicy';
 
 type AdminCheck = 'admin' | 'not_admin' | 'invalid_token';
 
@@ -68,6 +69,11 @@ export async function callDeployHook(hookUrl: string): Promise<{ ok: boolean; st
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (isPortfolioPreviewEnvironment(process.env)) {
+    res.status(503).json({ ok: false, error: 'preview_disabled' });
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).json({ ok: false, error: 'method_not_allowed' });
