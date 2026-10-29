@@ -48,12 +48,16 @@ import {
   PROJECTS,
   PROJECT_FEATURE_STATUS_LABELS,
 } from '../src/data/projects';
+import { isPortfolioPreviewEnvironment } from './portfolioPreviewPolicy';
 
 // En local carga .env.local / .env; en Vercel las vars ya vienen en process.env.
-loadEnv({ path: ['.env.local', '.env'] });
+const isolatePortfolioPreview = isPortfolioPreviewEnvironment(process.env);
+if (!isolatePortfolioPreview) loadEnv({ path: ['.env.local', '.env'] });
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = isolatePortfolioPreview ? undefined : process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = isolatePortfolioPreview
+  ? undefined
+  : process.env.VITE_SUPABASE_ANON_KEY;
 const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://www.charlitrondigital.com').replace(
   /\/$/,
   '',

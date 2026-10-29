@@ -8,6 +8,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undef
 // La seguridad real vive en las políticas RLS de la base de datos.
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
+const blockedFetch: typeof fetch = async () => {
+  throw new Error('Supabase requests are disabled because credentials are unavailable.');
+};
+
 if (!isSupabaseConfigured) {
   // Aviso en desarrollo; la landing debe seguir funcionando sin Supabase.
   console.warn(
@@ -24,6 +28,9 @@ export const supabase = createClient<Database>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+    },
+    global: {
+      fetch: isSupabaseConfigured ? fetch : blockedFetch,
     },
   },
 );

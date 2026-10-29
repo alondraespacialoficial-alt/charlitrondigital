@@ -2,10 +2,14 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
+import {isPortfolioPreviewEnvironment} from './scripts/portfolioPreviewPolicy.ts';
+
+const isolatePortfolioPreview = isPortfolioPreviewEnvironment(process.env);
 
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    envPrefix: isolatePortfolioPreview ? [] : 'VITE_',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
