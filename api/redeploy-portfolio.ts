@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { isPortfolioProductionMainEnvironment } from '../scripts/portfolioPreviewPolicy';
+
+// Copia local de scripts/portfolioPreviewPolicy.ts: Vercel no resuelve imports relativos sin extensión en ESM.
+function isPortfolioProductionMainEnvironment(environment: Record<string, string | undefined>): boolean {
+  return environment.VERCEL_ENV === 'production' && environment.VERCEL_GIT_COMMIT_REF === 'main';
+}
 
 function bearerToken(req: VercelRequest): string | null {
   const header = req.headers.authorization;
