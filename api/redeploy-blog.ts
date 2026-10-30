@@ -14,7 +14,15 @@
 // ============================================================================
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { isPortfolioPreviewEnvironment } from '../scripts/portfolioPreviewPolicy';
+
+// Copia local de scripts/portfolioPreviewPolicy.ts: Vercel no resuelve imports relativos sin extensión en ESM.
+const PORTFOLIO_PREVIEW_BRANCH = 'feat/portafolio-proyectos-v2';
+function isPortfolioPreviewEnvironment(environment: Record<string, string | undefined>): boolean {
+  return (
+    environment.VERCEL_ENV === 'preview' &&
+    environment.VERCEL_GIT_COMMIT_REF === PORTFOLIO_PREVIEW_BRANCH
+  );
+}
 
 type AdminCheck = 'admin' | 'not_admin' | 'invalid_token';
 

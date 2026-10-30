@@ -8,7 +8,7 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build && tsx scripts/prerender.ts",
     "preview": "vite preview",
-    "test:portfolio": "tsx --test src/features/admin/portfolioModel.test.ts src/features/admin/portfolioStorageRepository.test.ts src/features/projects/portfolioManifest.test.ts scripts/portfolioStorageAudit.test.ts scripts/portfolioStorageAuditScope.test.ts scripts/portfolioStoragePilot.test.ts scripts/portfolioPreviewPolicy.test.ts scripts/portfolioSnapshot.test.ts scripts/prerenderPortfolio.test.ts api/redeploy-portfolio.test.ts",
+    "test:portfolio": "tsx --test src/features/admin/portfolioModel.test.ts src/features/admin/portfolioStorageRepository.test.ts src/features/projects/portfolioManifest.test.ts scripts/portfolioStorageAudit.test.ts scripts/portfolioStorageAuditScope.test.ts scripts/portfolioStoragePilot.test.ts scripts/portfolioPreviewPolicy.test.ts scripts/portfolioSnapshot.test.ts scripts/prerenderPortfolio.test.ts api/redeploy-portfolio.test.ts api/functionImports.test.ts",
     "audit:portfolio-storage": "tsx scripts/portfolioStorageAuditCli.ts",
     "probe:portfolio-manifests": "tsx scripts/portfolioManifestProbe.ts",
     "clean": "rm -rf dist server.js",
