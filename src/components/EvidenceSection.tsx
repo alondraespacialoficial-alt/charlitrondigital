@@ -1,12 +1,31 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, MessageCircle } from 'lucide-react';
 import { createWhatsAppUrl } from '../data/content';
 import { CONCEPT_SOLUTIONS, PROJECTS } from '../data/projects';
+import type { ProjectImage } from '../data/projects';
+import { loadPortfolioManifest, resolvePortfolioManifestImages } from '../features/projects/portfolioManifest';
 
 export const EvidenceSection: React.FC = () => {
+  const [imagesByProject, setImagesByProject] = useState<Record<string, ProjectImage[]>>({});
   const softwareProjects = PROJECTS.filter((project) => project.group === 'software');
   const experienceProjects = PROJECTS.filter((project) => project.group === 'experience');
+
+  useEffect(() => {
+    if (!__PORTFOLIO_PUBLIC_MEDIA_ENABLED__) return;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) return;
+    let active = true;
+    void Promise.all(
+      PROJECTS.map(async (project) => {
+        const manifest = await loadPortfolioManifest(supabaseUrl, project.slug);
+        return [project.slug, manifest ? resolvePortfolioManifestImages(manifest, supabaseUrl) : []] as const;
+      }),
+    ).then((entries) => {
+      if (active) setImagesByProject(Object.fromEntries(entries));
+    });
+    return () => { active = false; };
+  }, []);
 
   return (
     <section id="evidencia" className="border-t border-zinc-900 px-4 py-20 sm:px-6 lg:px-8">
@@ -21,8 +40,8 @@ export const EvidenceSection: React.FC = () => {
           </p>
         </div>
 
-        <ProjectGroup title="Software y plataformas" projects={softwareProjects} />
-        <ProjectGroup title="Experiencias digitales e IA" projects={experienceProjects} />
+        <ProjectGroup title="Software y plataformas" projects={softwareProjects} imagesByProject={imagesByProject} />
+        <ProjectGroup title="Experiencias digitales e IA" projects={experienceProjects} imagesByProject={imagesByProject} />
 
         <section className="mt-16 border-t border-zinc-800 pt-8" aria-labelledby="concept-solutions-title">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">Ideas para nuevos proyectos</p>
@@ -49,9 +68,11 @@ export const EvidenceSection: React.FC = () => {
 function ProjectGroup({
   title,
   projects,
+  imagesByProject,
 }: {
   title: string;
   projects: typeof PROJECTS;
+  imagesByProject: Record<string, ProjectImage[]>;
 }) {
   return (
     <section className="mb-14" aria-label={title}>
@@ -59,14 +80,16 @@ function ProjectGroup({
         {title}
       </h3>
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
+        {projects.map((project) => {
+          const image = imagesByProject[project.slug]?.[0] ?? project.images?.[0];
+          return (
           <article key={project.slug} className="flex min-w-0 flex-col border border-zinc-800 bg-[#101013]">
-            {project.images?.[0] ? (
+            {image ? (
               <img
-                src={project.images[0].src}
-                alt={project.images[0].alt}
-                width={project.images[0].width}
-                height={project.images[0].height}
+                src={image.src}
+                alt={image.alt}
+                width={image.width}
+                height={image.height}
                 loading="lazy"
                 decoding="async"
                 className="aspect-[16/10] w-full border-b border-zinc-800 bg-black object-contain"
@@ -98,7 +121,8 @@ function ProjectGroup({
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

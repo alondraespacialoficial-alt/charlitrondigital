@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight, MessageCircle } from 'lucide-react';
 import { createWhatsAppUrl } from '../../data/content';
@@ -6,11 +6,13 @@ import {
   PROJECTS,
   PROJECT_FEATURE_STATUS_LABELS,
   type PortfolioProject,
+  type ProjectImage,
   type ProjectFeature,
 } from '../../data/projects';
 import { applyPageMeta } from '../../lib/seo';
 import { buildPortfolioProjectJsonLd } from '../../lib/jsonld';
 import { SITE_URL } from '../../lib/site';
+import { loadPortfolioManifest, resolvePortfolioManifestImages } from './portfolioManifest';
 
 export const ProjectRoute: React.FC = () => {
   const { slug } = useParams();
@@ -19,17 +21,36 @@ export const ProjectRoute: React.FC = () => {
 };
 
 function ProjectPage({ project }: { project: PortfolioProject }) {
+  const [remoteImages, setRemoteImages] = useState<ProjectImage[]>([]);
+  const images = remoteImages.length > 0 ? remoteImages : project.images ?? [];
+  const cover = images[0];
+
   useEffect(() => {
     applyPageMeta(
       {
         title: project.metaTitle,
         description: project.metaDescription,
         canonicalPath: `/proyectos/${project.slug}`,
+        ogImage: cover?.src,
+        ogImageAlt: cover?.alt,
+        ogImageWidth: cover?.width,
+        ogImageHeight: cover?.height,
       },
-      buildPortfolioProjectJsonLd(project, SITE_URL),
+      buildPortfolioProjectJsonLd(project, SITE_URL, cover?.src),
     );
     window.scrollTo({ top: 0 });
-  }, [project]);
+  }, [project, cover?.src, cover?.alt]);
+
+  useEffect(() => {
+    if (!__PORTFOLIO_PUBLIC_MEDIA_ENABLED__) return;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) return;
+    let active = true;
+    void loadPortfolioManifest(supabaseUrl, project.slug).then((manifest) => {
+      if (active && manifest) setRemoteImages(resolvePortfolioManifestImages(manifest, supabaseUrl));
+    });
+    return () => { active = false; };
+  }, [project.slug]);
 
   const whatsappUrl = createWhatsAppUrl(project.whatsappMessage);
 
@@ -90,7 +111,7 @@ function ProjectPage({ project }: { project: PortfolioProject }) {
               </a>
             </div>
           </div>
-          <ProjectGallery project={project} />
+          <ProjectGallery images={images} />
         </section>
 
         <section className="grid gap-8 border-b border-zinc-800 py-10 md:grid-cols-2 md:gap-12">
@@ -137,8 +158,8 @@ function ProjectPage({ project }: { project: PortfolioProject }) {
             Solo se mostrarán capturas auténticas autorizadas.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            {project.images?.length ? (
-              project.images.map((image) => (
+            {images.length > 0 ? (
+              images.map((image) => (
                 <figure key={image.src} className="overflow-hidden border border-zinc-800 bg-zinc-950">
                   <img
                     src={image.src}
@@ -171,8 +192,8 @@ function ProjectPage({ project }: { project: PortfolioProject }) {
   );
 }
 
-function ProjectGallery({ project }: { project: PortfolioProject }) {
-  const image = project.images?.[0];
+function ProjectGallery({ images }: { images: ProjectImage[] }) {
+  const image = images[0];
   if (image) {
     return (
       <img

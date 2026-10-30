@@ -48,7 +48,12 @@ import {
   PROJECTS,
   PROJECT_FEATURE_STATUS_LABELS,
 } from '../src/data/projects';
-import { isPortfolioPreviewEnvironment } from './portfolioPreviewPolicy';
+import type { ProjectImage } from '../src/data/projects';
+import { PortfolioSnapshotError, loadPortfolioSnapshot } from './portfolioSnapshot';
+import {
+  isPortfolioPreviewEnvironment,
+  isPortfolioPublicMediaEnabled,
+} from './portfolioPreviewPolicy';
 
 // En local carga .env.local / .env; en Vercel las vars ya vienen en process.env.
 const isolatePortfolioPreview = isPortfolioPreviewEnvironment(process.env);
@@ -280,7 +285,7 @@ ${items}
 // EvidenceSection, HowWeWork, ComplementaryServices, ContactSection) para que
 // crawlers e IA que no ejecutan JS no vean la página vacía. React reemplaza
 // este HTML al montar la SPA; el usuario final no nota diferencia.
-function renderHomeStatic(): string {
+function renderHomeStatic(portfolioImages: Record<string, ProjectImage[]>): string {
   const waHeroUrl = createWhatsAppUrl(
     'Hola Charlitron Digital, vi su página web y quiero platicar sobre una solución digital para mi negocio.',
   );
@@ -336,13 +341,25 @@ function renderHomeStatic(): string {
   );
   parts.push(
     `<ul>${PROJECTS.filter((project) => project.group === 'software').map(
-      (project) => `<li><a href="/proyectos/${project.slug}"><strong>${project.title}</strong></a> — ${project.summary}</li>`,
+      (project) => {
+        const cover = portfolioImages[project.slug]?.[0];
+        const imageHtml = cover
+          ? `<img src="${escapeHtmlAttr(cover.src)}" alt="${escapeHtmlAttr(cover.alt)}" loading="lazy" width="${cover.width}" height="${cover.height}" /> `
+          : '';
+        return `<li><a href="/proyectos/${project.slug}">${imageHtml}<strong>${project.title}</strong></a> — ${project.summary}</li>`;
+      },
     ).join('')}</ul>`,
   );
   parts.push('<h3>Experiencias digitales e IA</h3>');
   parts.push(
     `<ul>${PROJECTS.filter((project) => project.group === 'experience').map(
-      (project) => `<li><a href="/proyectos/${project.slug}"><strong>${project.title}</strong></a> — ${project.summary}</li>`,
+      (project) => {
+        const cover = portfolioImages[project.slug]?.[0];
+        const imageHtml = cover
+          ? `<img src="${escapeHtmlAttr(cover.src)}" alt="${escapeHtmlAttr(cover.alt)}" loading="lazy" width="${cover.width}" height="${cover.height}" /> `
+          : '';
+        return `<li><a href="/proyectos/${project.slug}">${imageHtml}<strong>${project.title}</strong></a> — ${project.summary}</li>`;
+      },
     ).join('')}</ul>`,
   );
   parts.push('<h3>Soluciones conceptuales</h3>');
@@ -548,7 +565,10 @@ function renderBtlCasesStatic(): string {
   return parts.join('\n');
 }
 
-function renderProjectStatic(project: (typeof PROJECTS)[number]): string {
+function renderProjectStatic(
+  project: (typeof PROJECTS)[number],
+  projectImages: ProjectImage[] = [],
+): string {
   const whatsappUrl = createWhatsAppUrl(project.whatsappMessage);
   const parts: string[] = [];
   parts.push('<main style="max-width:64rem;margin:0 auto;padding:3rem 1rem;font-family:sans-serif;">');
@@ -595,12 +615,12 @@ function renderProjectStatic(project: (typeof PROJECTS)[number]): string {
     );
   }
   parts.push('<h2>Evidencias del proyecto</h2>');
-  if (project.images?.length) {
+  if (projectImages.length > 0) {
     parts.push(
-      project.images
+      projectImages
         .map(
           (image) =>
-            `<figure><img src="${escapeHtmlAttr(image.src)}" alt="${escapeHtmlAttr(image.alt)}" loading="lazy" decoding="async" width="${image.width}" height="${image.height}" /><figcaption>${image.alt}</figcaption></figure>`,
+            `<figure><img src="${escapeHtmlAttr(image.src)}" alt="${escapeHtmlAttr(image.alt)}" loading="lazy" decoding="async" width="${image.width}" height="${image.height}" /><figcaption>${escapeHtmlAttr(image.alt)}</figcaption></figure>`,
         )
         .join('\n'),
     );
@@ -672,6 +692,16 @@ async function fetchPublishedArticles(): Promise<ArticleWithCategory[]> {
   return (await response.json()) as ArticleWithCategory[];
 }
 
+async function loadProductionPortfolioImages(): Promise<Record<string, ProjectImage[]>> {
+  if (!isPortfolioPublicMediaEnabled(process.env)) return {};
+  return loadPortfolioSnapshot({
+    supabaseUrl: SUPABASE_URL,
+    slugs: PROJECTS.map((project) => project.slug),
+    delayMs: Number(process.env.PORTFOLIO_PRERENDER_RETRY_DELAY_MS ?? 1000),
+    log: console.log,
+  });
+}
+
 async function main() {
   const template = await readFile(path.join(DIST_DIR, 'index.html'), 'utf8');
 
@@ -688,6 +718,7 @@ async function main() {
   } else {
     console.warn('[prerender] Sin VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY: solo páginas base.');
   }
+  const portfolioImages = await loadProductionPortfolioImages();
 
   // /blog
   await mkdir(path.join(DIST_DIR, 'blog'), { recursive: true });
@@ -808,7 +839,8 @@ async function main() {
   for (const project of PROJECTS) {
     const dir = path.join(DIST_DIR, 'proyectos', project.slug);
     await mkdir(dir, { recursive: true });
-    const projectImage = project.images?.[0];
+    const projectImages = portfolioImages[project.slug] ?? project.images ?? [];
+    const projectImage = projectImages[0];
     const meta: HeadMeta = {
       title: project.metaTitle,
       description: project.metaDescription,
@@ -820,11 +852,13 @@ async function main() {
           : `${SITE_URL}${projectImage.src.startsWith('/') ? '' : '/'}${projectImage.src}`
         : DEFAULT_SOCIAL_IMAGE,
       ogImageAlt: projectImage?.alt ?? DEFAULT_SOCIAL_IMAGE_ALT,
-      jsonLd: buildPortfolioProjectJsonLd(project, SITE_URL),
+      ogImageWidth: projectImage?.width ?? 1200,
+      ogImageHeight: projectImage?.height ?? 630,
+      jsonLd: buildPortfolioProjectJsonLd(project, SITE_URL, projectImage?.src),
     };
     await writeFile(
       path.join(dir, 'index.html'),
-      injectBody(applyHead(template, meta), renderProjectStatic(project)),
+      injectBody(applyHead(template, meta), renderProjectStatic(project, projectImages)),
       'utf8',
     );
   }
@@ -833,7 +867,7 @@ async function main() {
   // prístino en memoria (las páginas del blog ya se escribieron desde él).
   await writeFile(
     path.join(DIST_DIR, 'index.html'),
-    injectBody(template, renderHomeStatic()),
+    injectBody(template, renderHomeStatic(portfolioImages)),
     'utf8',
   );
 
@@ -848,6 +882,12 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (error instanceof PortfolioSnapshotError) {
+    // Sin archivos escritos: el despliegue anterior de Production se conserva.
+    console.error(`[prerender] ${error.message}`);
+    process.exitCode = 1;
+    return;
+  }
   // No romper el deploy por un fallo de prerender; el blog funciona client-side.
   console.warn('[prerender] falló el prerender (build continúa):', error);
 });

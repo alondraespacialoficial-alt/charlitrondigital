@@ -3,6 +3,7 @@ import {
   BarChart3,
   FileText,
   FolderOpen,
+  Images,
   LayoutDashboard,
   Lightbulb,
   LogOut,
@@ -22,10 +23,11 @@ import { CategoriesAdmin } from './CategoriesAdmin';
 import { IdeasAdmin } from './IdeasAdmin';
 import { MetricsAdmin } from './MetricsAdmin';
 import { SettingsAdmin } from './SettingsAdmin';
+import { PortfolioAdmin } from './PortfolioAdmin';
 import { logAdminAction } from './audit';
 import { primaryButton } from './ui';
 
-type Section = 'overview' | 'articles' | 'ideas' | 'categories' | 'metrics' | 'settings';
+type Section = 'overview' | 'articles' | 'ideas' | 'categories' | 'metrics' | 'portfolio' | 'settings';
 
 const NAV_GROUPS: Array<{ label: string | null; items: Array<{ id: Section; label: string; icon: React.ElementType }> }> = [
   { label: null, items: [{ id: 'overview', label: 'Resumen', icon: LayoutDashboard }] },
@@ -41,6 +43,7 @@ const NAV_GROUPS: Array<{ label: string | null; items: Array<{ id: Section; labe
     label: 'Sistema',
     items: [
       { id: 'metrics', label: 'Métricas', icon: BarChart3 },
+        { id: 'portfolio', label: 'Portafolio', icon: Images },
       { id: 'settings', label: 'Configuración', icon: Settings },
     ],
   },
@@ -241,6 +244,7 @@ export const AdminApp: React.FC = () => {
           {section === 'ideas' && <IdeasAdmin user={user} />}
           {section === 'categories' && <CategoriesAdmin user={user} />}
           {section === 'metrics' && <MetricsAdmin />}
+          {section === 'portfolio' && <PortfolioAdmin user={user} />}
           {section === 'settings' && <SettingsAdmin user={user} onSignOut={() => signOut(user)} />}
         </div>
       </main>

@@ -78,7 +78,11 @@ export function buildBlogJsonLd(siteUrl: string, siteName: string): object {
   };
 }
 
-export function buildPortfolioProjectJsonLd(project: PortfolioProject, siteUrl: string): object[] {
+export function buildPortfolioProjectJsonLd(
+  project: PortfolioProject,
+  siteUrl: string,
+  imageUrl?: string,
+): object[] {
   const url = `${siteUrl}/proyectos/${project.slug}`;
   return [
     {
@@ -87,6 +91,7 @@ export function buildPortfolioProjectJsonLd(project: PortfolioProject, siteUrl: 
       '@id': `${url}#project`,
       name: project.title,
       description: project.summary,
+      image: imageUrl,
       url,
       inLanguage: 'es-MX',
     },

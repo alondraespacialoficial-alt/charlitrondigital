@@ -10,6 +10,8 @@ export interface PageMeta {
   canonicalPath: string;
   ogImage?: string | null;
   ogImageAlt?: string | null;
+  ogImageWidth?: number;
+  ogImageHeight?: number;
   ogType?: 'website' | 'article';
   publishedTime?: string | null;
 }
@@ -53,6 +55,11 @@ export function applyPageMeta(meta: PageMeta, jsonLd?: object | object[]) {
   upsertMeta('property', 'og:site_name', SITE_NAME);
   upsertMeta('property', 'og:image', ogImage);
   upsertMeta('property', 'og:image:alt', meta.ogImageAlt ?? DEFAULT_SOCIAL_IMAGE_ALT);
+  if (meta.ogImageWidth && meta.ogImageHeight) {
+    upsertMeta('property', 'og:image:secure_url', ogImage);
+    upsertMeta('property', 'og:image:width', String(meta.ogImageWidth));
+    upsertMeta('property', 'og:image:height', String(meta.ogImageHeight));
+  }
   if (meta.ogType === 'article' && meta.publishedTime) {
     upsertMeta('property', 'article:published_time', meta.publishedTime);
   } else {
