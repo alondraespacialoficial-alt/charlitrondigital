@@ -4,12 +4,13 @@
 
 Los buckets `portfolio-drafts` y `portfolio-published` y sus ocho políticas ya
 están instalados en el proyecto Supabase. El Super Admin incluye un adaptador
-de Storage (`portfolioStorageRepository.ts`), pero **solo se activa en builds
-locales** con `PORTFOLIO_STORAGE_ENABLED=true`. En cualquier despliegue de
-Vercel (Production o Preview) `isPortfolioStorageEnabled` devuelve `false` y el
-adaptador se elimina del bundle aunque la variable esté definida: activarlo en
-Vercel exige cambiar ese código en un cambio aparte y aprobado. Sin indicador,
-el panel funciona en modo demostración (memoria).
+de Storage (`portfolioStorageRepository.ts`) que solo se activa con
+`PORTFOLIO_STORAGE_ENABLED=true` en builds locales o en Production/main de Vercel
+(los cuatro proyectos; `PORTFOLIO_PILOT_PROJECT` solo aplica en local). Publicar
+exige además `PORTFOLIO_PUBLISH_ENABLED=true`. En Preview y en cualquier otra rama
+`isPortfolioStorageEnabled` devuelve `false` y el adaptador se elimina del bundle
+aunque las variables estén definidas. Sin indicador, el panel funciona en modo
+demostración (memoria).
 Publicar no solicita regeneración del HTML; el endpoint
 `/api/redeploy-portfolio` existe pero el panel todavía no lo llama (ver
 «Pendiente bloqueante»).

@@ -25,22 +25,26 @@ export function isPortfolioPublicMediaEnabled(
   );
 }
 
-// Opt-in solo para builds locales. Nunca en Vercel (Preview ni Production): activarlo allí requiere cambiar este código.
+// Opt-in explícito: builds locales (fuera de Vercel) o Production/main. Nunca Preview ni otras ramas.
 export function isPortfolioStorageEnabled(
   environment: Record<string, string | undefined>,
 ): boolean {
+  if (environment.PORTFOLIO_STORAGE_ENABLED !== 'true') return false;
   const onVercel = Boolean(environment.VERCEL || environment.VERCEL_ENV);
-  return environment.PORTFOLIO_STORAGE_ENABLED === 'true' && !onVercel;
+  return !onVercel || isPortfolioProductionMainEnvironment(environment);
 }
 
-// Con Storage real local, publicar exige un segundo indicador explícito; por defecto solo se guardan borradores.
+// Con Storage real, publicar exige un segundo indicador explícito; por defecto solo se guardan borradores.
 export function isPortfolioPublishEnabled(
   environment: Record<string, string | undefined>,
 ): boolean {
   return isPortfolioStorageEnabled(environment) && environment.PORTFOLIO_PUBLISH_ENABLED === 'true';
 }
 
-// Si se define, el gestor con Storage real solo opera sobre ese proyecto ('' = todos).
+// Solo local: limita el gestor a ese proyecto ('' = todos). En Production se administran los cuatro.
 export function portfolioPilotProject(environment: Record<string, string | undefined>): string {
-  return isPortfolioStorageEnabled(environment) ? (environment.PORTFOLIO_PILOT_PROJECT ?? '').trim() : '';
+  const onVercel = Boolean(environment.VERCEL || environment.VERCEL_ENV);
+  return isPortfolioStorageEnabled(environment) && !onVercel
+    ? (environment.PORTFOLIO_PILOT_PROJECT ?? '').trim()
+    : '';
 }
