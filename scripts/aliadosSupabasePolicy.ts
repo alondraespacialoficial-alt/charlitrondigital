@@ -12,11 +12,17 @@ export interface AliadosBuildConfig {
 
 const EMPTY: AliadosBuildConfig = { url: '', anonKey: '' };
 
-// Fuera de Vercel (desarrollo local) se permite; en Vercel solo en Preview de la rama de Aliados.
+// Fuera de Vercel (desarrollo local) se permite; en Vercel solo en Production y en Preview de la rama de Aliados.
 export function isAliadosAuthBuildAllowed(environment: Environment): boolean {
   const onVercel = Boolean(environment.VERCEL || environment.VERCEL_ENV);
   if (!onVercel) return true;
+  if (environment.VERCEL_ENV === 'production') return true;
   return environment.VERCEL_ENV === 'preview' && environment.VERCEL_GIT_COMMIT_REF === ALIADOS_PREVIEW_BRANCH;
+}
+
+// En Production, Aliados es obligatorio: sin variables el build falla en vez de publicar un modulo desconectado.
+export function isAliadosRequired(environment: Environment): boolean {
+  return environment.VERCEL_ENV === 'production';
 }
 
 function hostOf(value: string | undefined): string | null {
@@ -46,7 +52,12 @@ export function aliadosSupabaseBuildConfig(environment: Environment): AliadosBui
 
   const url = (environment.ALIADOS_SUPABASE_URL ?? '').trim().replace(/\/+$/, '');
   const anonKey = (environment.ALIADOS_SUPABASE_ANON_KEY ?? '').trim();
-  if (!url && !anonKey) return EMPTY;
+  if (!url && !anonKey) {
+    if (isAliadosRequired(environment)) {
+      throw new Error('Production requiere ALIADOS_SUPABASE_URL y ALIADOS_SUPABASE_ANON_KEY: faltan ambas.');
+    }
+    return EMPTY;
+  }
   if (!url || !anonKey) {
     throw new Error('ALIADOS_SUPABASE_URL y ALIADOS_SUPABASE_ANON_KEY deben definirse juntas.');
   }

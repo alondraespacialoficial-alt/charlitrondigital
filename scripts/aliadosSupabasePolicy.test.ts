@@ -10,24 +10,40 @@ const b64 = (value: object) => Buffer.from(JSON.stringify(value)).toString('base
 const jwt = (role: string) => `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ role })}.firma`;
 const LAB = 'https://labtestproject.supabase.co';
 const previewAliados = { VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'feat/aliados-charlitron' };
+const production = { VERCEL: '1', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'main' };
 
-test('only Preview of the Aliados branch (or local dev) may use the Aliados project', () => {
+test('only Production, Preview of the Aliados branch or local dev may use the Aliados project', () => {
   assert.equal(isAliadosAuthBuildAllowed(previewAliados), true);
   assert.equal(isAliadosAuthBuildAllowed({}), true);
-  assert.equal(isAliadosAuthBuildAllowed({ VERCEL: '1', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'main' }), false);
-  assert.equal(isAliadosAuthBuildAllowed({ VERCEL: '1', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'feat/aliados-charlitron' }), false);
+  assert.equal(isAliadosAuthBuildAllowed({ VERCEL: '1', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'main' }), true);
   assert.equal(isAliadosAuthBuildAllowed({ VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'feat/portafolio-proyectos-v2' }), false);
   assert.equal(isAliadosAuthBuildAllowed({ VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'main' }), false);
 });
 
-test('returns the config in the allowed Preview and ignores it everywhere else', () => {
+test('returns the config in Production and the Aliados Preview, and ignores it in other Previews', () => {
   const vars = { ALIADOS_SUPABASE_URL: `${LAB}/`, ALIADOS_SUPABASE_ANON_KEY: jwt('anon') };
   assert.deepEqual(aliadosSupabaseBuildConfig({ ...previewAliados, ...vars }), { url: LAB, anonKey: jwt('anon') });
-  const production = { VERCEL: '1', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'main' };
-  assert.deepEqual(aliadosSupabaseBuildConfig({ ...production, ...vars }), { url: '', anonKey: '' });
-  assert.equal(aliadosSupabaseWasIgnored({ ...production, ...vars }), true);
+  assert.deepEqual(aliadosSupabaseBuildConfig({ ...production, ...vars }), { url: LAB, anonKey: jwt('anon') });
+  const otherPreview = { VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'feat/portafolio-proyectos-v2' };
+  assert.deepEqual(aliadosSupabaseBuildConfig({ ...otherPreview, ...vars }), { url: '', anonKey: '' });
+  assert.equal(aliadosSupabaseWasIgnored({ ...otherPreview, ...vars }), true);
+  assert.equal(aliadosSupabaseWasIgnored({ ...production, ...vars }), false);
   assert.equal(aliadosSupabaseWasIgnored({ ...previewAliados, ...vars }), false);
   assert.deepEqual(aliadosSupabaseBuildConfig(previewAliados), { url: '', anonKey: '' });
+});
+
+test('Production breaks the build when ALIADOS_* are missing or incomplete', () => {
+  assert.throws(() => aliadosSupabaseBuildConfig(production), /Production requiere/);
+  assert.throws(() => aliadosSupabaseBuildConfig({ ...production, ALIADOS_SUPABASE_URL: LAB }), /juntas/);
+  assert.throws(() => aliadosSupabaseBuildConfig({ ...production, ALIADOS_SUPABASE_ANON_KEY: jwt('anon') }), /juntas/);
+});
+
+test('Production keeps the editorial Supabase protections', () => {
+  const vars = { ...production, ALIADOS_SUPABASE_URL: LAB, ALIADOS_SUPABASE_ANON_KEY: jwt('anon') };
+  assert.throws(() => aliadosSupabaseBuildConfig({ ...vars, ALIADOS_SUPABASE_URL: 'https://rvvqhpbtqgjpzflopflv.supabase.co' }), /editorial/);
+  assert.throws(() => aliadosSupabaseBuildConfig({ ...vars, VITE_SUPABASE_URL: LAB }), /coincide con VITE_SUPABASE_URL/);
+  assert.throws(() => aliadosSupabaseBuildConfig({ ...vars, ALIADOS_SUPABASE_ANON_KEY: jwt('service_role') }), /anon/);
+  assert.doesNotThrow(() => aliadosSupabaseBuildConfig({ ...vars, VITE_SUPABASE_URL: 'https://rvvqhpbtqgjpzflopflv.supabase.co' }));
 });
 
 test('breaks the build on unsafe combinations', () => {
