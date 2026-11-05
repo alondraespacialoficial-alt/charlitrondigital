@@ -5,7 +5,7 @@ import test from 'node:test';
 
 const dir = path.dirname(new URL(import.meta.url).pathname);
 const sources = readdirSync(dir)
-  .filter((name) => /\.(ts|tsx)$/.test(name) && !name.endsWith('.test.ts') && !name.endsWith('.d.ts'))
+  .filter((name) => /\.(ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name) && !name.endsWith('.d.ts'))
   .map((name) => ({ name, text: readFileSync(path.join(dir, name), 'utf8') }));
 
 test('the Aliados module never uses the editorial Supabase client or its env vars', () => {
@@ -40,13 +40,24 @@ test('the Aliados client is independent: own storage key, built only from the in
 
 test('the admin panel is only reachable through the admin gate', () => {
   const app = sources.find((source) => source.name === 'AliadosApp.tsx')?.text ?? '';
-  const uses = app.match(/<AliadosAdminPrototype\b/g) ?? [];
+  const uses = app.match(/<AliadosAdminPanel\b/g) ?? [];
   assert.equal(uses.length, 1);
-  assert.match(app, /function AdminGate[\s\S]*destinationFor\(state\.role\) !== 'admin'[\s\S]*<AliadosAdminPrototype/);
-  assert.match(app, /lazy\(\(\) => import\('\.\/AliadosAdminPrototype'\)\)/);
+  assert.match(app, /function AdminGate[\s\S]*destinationFor\(state\.role\) !== 'admin'[\s\S]*<AliadosAdminPanel/);
+  assert.match(app, /lazy\(\(\) => import\('\.\/AliadosAdminPanel'\)/);
 });
 
 test('the old fake login state is gone', () => {
   const app = sources.find((source) => source.name === 'AliadosApp.tsx')?.text ?? '';
   assert.equal(/demoSignedIn|setDemoSignedIn|Acceso de demostraci/.test(app), false);
+});
+
+test('el codigo del aliado no consulta tablas ni vistas de administrador', () => {
+  for (const name of ['AliadosApp.tsx', 'useAliadosData.ts']) {
+    const text = sources.find((source) => source.name === name)?.text ?? '';
+    assert.equal(/\.from\(\s*['"`]/.test(text), false, `${name} consulta tablas directamente`);
+    assert.equal(/admin_(registrations|allies|referrals|sales|payments|commissions|commission_payments|audit_log)/.test(text), false, `${name} usa vistas de administrador`);
+  }
+  const hook = sources.find((source) => source.name === 'useAliadosData.ts')?.text ?? '';
+  assert.match(hook, /listMyReferrals/);
+  assert.match(hook, /listMyCommissions/);
 });

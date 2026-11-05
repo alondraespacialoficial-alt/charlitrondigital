@@ -80,26 +80,23 @@ export function AllyRegistrationForm() {
     setState(s => ({ ...s, loading: true, error: undefined, success: undefined }));
 
     try {
-      // Usar función SECURITY DEFINER: submit_registration
-      // Esta función valida entrada y guarda en ally_registrations de forma segura
-      const { data, error } = await aliadosSupabase.rpc('submit_registration', {
+      // Función SECURITY DEFINER: valida, normaliza y guarda; responde igual si el correo ya existe.
+      const { error } = await aliadosSupabase.rpc('submit_ally_registration', {
         p_email: state.form.email,
         p_full_name: state.form.full_name,
         p_phone: state.form.phone || null,
         p_city: state.form.city || null,
-        p_share_data_agreed: state.form.share_data_agreed,
+        p_consent: state.form.share_data_agreed,
       });
 
       if (error) {
         throw error;
       }
 
-      const registrationId = data as string;
-
       setState(s => ({
         ...s,
         loading: false,
-        success: `Solicitud registrada exitosamente. Ref: ${registrationId.slice(0, 8)}. El administrador la revisará pronto.`,
+        success: 'Solicitud recibida. Si es aprobada, te llegará un correo para confirmar tu cuenta.',
         form: {
           email: '',
           full_name: '',
@@ -109,7 +106,10 @@ export function AllyRegistrationForm() {
         },
       }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al registrar solicitud';
+      const message =
+        typeof err === 'object' && err !== null && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'Error al registrar solicitud';
       setState(s => ({ ...s, loading: false, error: message }));
     }
   };

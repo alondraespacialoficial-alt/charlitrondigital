@@ -10,10 +10,9 @@
     "preview": "vite preview",
     "test:portfolio": "tsx --test src/features/admin/portfolioModel.test.ts src/features/admin/portfolioStorageRepository.test.ts src/features/projects/portfolioManifest.test.ts scripts/portfolioStorageAudit.test.ts scripts/portfolioStorageAuditScope.test.ts scripts/portfolioStoragePilot.test.ts scripts/portfolioPreviewPolicy.test.ts scripts/portfolioSnapshot.test.ts scripts/prerenderPortfolio.test.ts api/redeploy-portfolio.test.ts",
     "audit:portfolio-storage": "tsx scripts/portfolioStorageAuditCli.ts",
-    "test:aliados": "tsx --test scripts/aliadosSupabasePolicy.test.ts src/features/aliados/aliadosRole.test.ts src/features/aliados/aliadosIsolation.test.ts",
-    "test:aliados-e2e": "tsx scripts/aliados-e2e.ts",
+    "test:aliados": "tsx --test scripts/aliadosSupabasePolicy.test.ts src/features/aliados/aliadosRole.test.ts src/features/aliados/aliadosIsolation.test.ts api/aliados-approve-registration.test.ts src/features/aliados/aliadosLabels.test.ts src/features/aliados/aliadosRepository.test.ts src/features/aliados/aliadosPanels.test.tsx",
+    "test:aliados-sql": "bash scripts/aliados-sql/run.sh",
     "smoke:aliados-auth": "tsx scripts/aliadosAuthSmoke.ts",
-    "test:aliados-schema": "tsx src/features/aliados/aliadosSchemaValidation.ts",
     "probe:portfolio-manifests": "tsx scripts/portfolioManifestProbe.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"

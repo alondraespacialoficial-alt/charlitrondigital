@@ -23,11 +23,13 @@ import { CharlitronLogo } from '../../components/CharlitronLogo';
 import { applyPageMeta } from '../../lib/seo';
 import { destinationFor } from './aliadosRole';
 import { useAliadosSession, type AliadosSession } from './useAliadosSession';
+import { useAliadosRepository, useAllyData } from './useAliadosData';
+import type { AliadosRepository, Commission, Referral } from './aliadosRepository';
+import { COMMISSION_STATUS_LABELS, REFERRAL_STATUS_LABELS, errorText, formatDate, formatMoney, statusLabel } from './aliadosLabels';
 
 type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
 
 // Carga diferida: los paneles no viajan en el código del área de landing.
-const AliadosAdminPrototype = lazy(() => import('./AliadosAdminPrototype'));
 const AliadosAdminPanel = lazy(() => import('./AliadosAdminPanel').then(m => ({ default: m.AliadosAdminPanel })));
 const AllyRegistrationForm = lazy(() => import('./AllyRegistrationForm').then(m => ({ default: m.AllyRegistrationForm })));
 
@@ -105,33 +107,6 @@ function useAliadosMeta(path: string) {
   }, [path]);
 }
 
-const referrals = [
-  {
-    business: 'Clínica Boreal',
-    project: 'Publicidad digital',
-    date: '24 oct 2026',
-    status: 'Proyecto cobrado',
-    commission: '$3,200 MXN',
-    payout: 'Liberación pendiente',
-  },
-  {
-    business: 'Panadería Olivo',
-    project: 'Sitio web',
-    date: '18 oct 2026',
-    status: 'En cotización',
-    commission: 'Según acuerdo',
-    payout: 'Pendiente de cobro',
-  },
-  {
-    business: 'Barra Lumbre',
-    project: 'Automatización',
-    date: '09 oct 2026',
-    status: 'Primer contacto',
-    commission: 'Según acuerdo',
-    payout: 'En seguimiento',
-  },
-];
-
 const publicSteps = [
   { number: '01', title: 'Recomienda una oportunidad.', icon: ArrowDownRight },
   { number: '02', title: 'Charlitron contacta, cotiza y ejecuta.', icon: BriefcaseBusiness },
@@ -193,7 +168,7 @@ function AdminGate({ session, onSignOut }: { session: AliadosSession; onSignOut:
   }
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#09090b]" />}>
-      <AliadosAdminPanel />
+      <AliadosAdminPanel onSignOut={onSignOut} />
     </Suspense>
   );
 }
@@ -521,7 +496,7 @@ function PartnerLogin({ session }: { session: AliadosSession }) {
           </button>
           {message && <p role="alert" className="text-xs leading-5 text-red-300">{message}</p>}
         </form>
-        <p className="mt-6 border-t border-white/10 pt-5 text-xs leading-5 text-zinc-600">El acceso es solo para cuentas autorizadas por Charlitron; el registro público no está disponible. Los datos del panel siguen siendo ficticios.</p>
+        <p className="mt-6 border-t border-white/10 pt-5 text-xs leading-5 text-zinc-600">El acceso es solo para cuentas autorizadas por Charlitron; el registro público no está disponible.</p>
       </section>
     </main>
   );
@@ -529,6 +504,8 @@ function PartnerLogin({ session }: { session: AliadosSession }) {
 
 function PartnerDashboard({ displayName, onLogout }: { displayName: string; onLogout: () => void }) {
   const firstName = displayName.trim().split(' ')[0] ?? '';
+  const repo = useAliadosRepository();
+  const data = useAllyData(repo);
   const [activeTab, setActiveTab] = useState<PanelTab>('resumen');
   const [referralOpen, setReferralOpen] = useState(false);
   const tabs: { id: PanelTab; label: string; icon: typeof UsersRound }[] = [
@@ -567,43 +544,53 @@ function PartnerDashboard({ displayName, onLogout }: { displayName: string; onLo
         </aside>
 
         <main className="px-5 py-8 sm:px-8 lg:py-10">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-200">Tu espacio</p>
-              <h1 className="mt-2 font-display text-3xl font-semibold text-white">{activeTab === 'resumen' ? `Hola${firstName ? `, ${firstName}` : ''}.` : activeTab === 'recomendaciones' ? 'Tus recomendaciones.' : 'Tus comisiones.'}</h1>
-              <p className="mt-2 text-sm text-zinc-500">{activeTab === 'resumen' ? 'Aquí puedes dar seguimiento a tus oportunidades.' : activeTab === 'recomendaciones' ? 'El avance de los negocios que acercaste a Charlitron.' : 'Acuerdos registrados y su estado de liberación.'}</p>
-            </div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/15 bg-amber-200/[0.05] px-3 py-1.5 text-[11px] font-medium text-amber-100/80">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-200" /> Vista de demostración · datos ficticios
-            </span>
+          <div className="mb-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-200">Tu espacio</p>
+            <h1 className="mt-2 font-display text-3xl font-semibold text-white">{activeTab === 'resumen' ? `Hola${firstName ? `, ${firstName}` : ''}.` : activeTab === 'recomendaciones' ? 'Tus recomendaciones.' : 'Tus comisiones.'}</h1>
+            <p className="mt-2 text-sm text-zinc-500">{activeTab === 'resumen' ? 'Aquí puedes dar seguimiento a tus oportunidades.' : activeTab === 'recomendaciones' ? 'El avance de los negocios que acercaste a Charlitron.' : 'Acuerdos registrados y su estado de liberación.'}</p>
           </div>
 
-          {activeTab === 'resumen' && <DashboardOverview onViewReferrals={() => setActiveTab('recomendaciones')} />}
-          {activeTab === 'recomendaciones' && (
+          {data.error && (
+            <div role="alert" className="mb-6 flex items-center justify-between gap-4 rounded-md border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              <span>{data.error}</span>
+              <button type="button" onClick={() => void data.reload()} className="shrink-0 font-semibold text-red-100 underline underline-offset-2">Reintentar</button>
+            </div>
+          )}
+
+          {data.loading ? (
+            <p role="status" className="text-sm text-zinc-500">Cargando tus datos…</p>
+          ) : (
             <>
-              <div className="mb-5 flex justify-end">
-                <button type="button" onClick={() => setReferralOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
-                  + Registrar nuevo referido
-                </button>
-              </div>
-              <ReferralsTable showCommission={false} />
+              {activeTab === 'resumen' && <DashboardOverview referrals={data.referrals} commissions={data.commissions} onViewReferrals={() => setActiveTab('recomendaciones')} />}
+              {activeTab === 'recomendaciones' && (
+                <>
+                  <div className="mb-5 flex justify-end">
+                    <button type="button" onClick={() => setReferralOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
+                      + Registrar nuevo referido
+                    </button>
+                  </div>
+                  <ReferralsTable referrals={data.referrals} commissions={data.commissions} showCommission={false} />
+                </>
+              )}
+              {activeTab === 'comisiones' && <CommissionList commissions={data.commissions} />}
             </>
           )}
-          {activeTab === 'comisiones' && <CommissionList />}
         </main>
       </div>
-      {referralOpen && <NewReferralDialog onClose={() => setReferralOpen(false)} />}
+      {referralOpen && <NewReferralDialog repo={repo} onClose={() => setReferralOpen(false)} onCreated={() => void data.reload()} />}
     </div>
   );
 }
 
-function DashboardOverview({ onViewReferrals }: { onViewReferrals: () => void }) {
+function DashboardOverview({ referrals, commissions, onViewReferrals }: { referrals: Referral[]; commissions: Commission[]; onViewReferrals: () => void }) {
+  const following = referrals.filter((referral) => ['new', 'contacted', 'interested'].includes(referral.status)).length;
+  const paid = commissions.reduce((sum, commission) => sum + commission.paid_total, 0);
   return (
     <>
       <section aria-label="Resumen de actividad" className="grid gap-3 sm:grid-cols-3">
-        <SummaryMetric label="Recomendaciones" value="03" hint="Oportunidades registradas" icon={UsersRound} />
-        <SummaryMetric label="En seguimiento" value="02" hint="Charlitron está en contacto" icon={Clock3} />
-        <SummaryMetric label="Acuerdo registrado" value="$3,200 MXN" hint="Ejemplo · sujeto al acuerdo" icon={WalletCards} />
+        <SummaryMetric label="Recomendaciones" value={String(referrals.length)} hint="Oportunidades registradas" icon={UsersRound} />
+        <SummaryMetric label="En seguimiento" value={String(following)} hint="Charlitron está en contacto" icon={Clock3} />
+        <SummaryMetric label="Comisiones pagadas" value={formatMoney(paid)} hint="Liberado por Charlitron" icon={WalletCards} />
       </section>
 
       <section className="mt-9">
@@ -616,12 +603,12 @@ function DashboardOverview({ onViewReferrals }: { onViewReferrals: () => void })
             Ver todas <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-        <ReferralsTable showCommission />
+        <ReferralsTable referrals={referrals.slice(0, 5)} commissions={commissions} showCommission />
       </section>
 
       <div className="mt-5 flex gap-3 border-l-2 border-emerald-300/50 bg-emerald-300/[0.04] px-4 py-3 text-xs leading-5 text-zinc-400">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-        La comisión solo puede liberarse después de que Charlitron confirme el cobro del proyecto al cliente. Los datos de este panel son ficticios.
+        La comisión solo puede liberarse después de que Charlitron confirme el cobro del proyecto al cliente.
       </div>
     </>
   );
@@ -637,33 +624,36 @@ function SummaryMetric({ label, value, hint, icon: Icon }: { label: string; valu
   );
 }
 
-const referralServices = [
-  'Páginas web',
-  'Apps y sistemas',
-  'Automatización e IA',
-  'Perifoneo',
-  'Volanteo',
-  'Activaciones BTL',
-  'Promotores y demostradoras',
-  'Eventos',
-  'Producción audiovisual',
-  'No estoy seguro',
-];
-
-const referralRelations = ['Cliente conocido', 'Amigo o familiar', 'Contacto profesional', 'Negocio que visité', 'Otro'];
-
 const fieldClass = 'mt-2 min-h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-white outline-none transition placeholder:text-zinc-600 focus:border-amber-200/60';
 
-// Fondo y texto explícitos (también en <option>) para legibilidad en Chrome, Edge y móviles.
-const selectClass = 'mt-2 min-h-11 w-full rounded-md border border-white/10 bg-[#0b0b0d] px-3 text-zinc-100 outline-none transition [color-scheme:dark] focus:border-amber-200/60';
-const optionClass = 'bg-[#0b0b0d] text-zinc-100';
+function NewReferralDialog({ repo, onClose, onCreated }: { repo: AliadosRepository | null; onClose: () => void; onCreated: () => void }) {
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-function NewReferralDialog({ onClose }: { onClose: () => void }) {
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmitted(true);
+    if (!repo || busy) return;
+    const form = new FormData(event.currentTarget);
+    const text = (name: string) => String(form.get(name) ?? '').trim();
+    setBusy(true);
+    setError('');
+    try {
+      await repo.submitReferral({
+        name: text('contact'),
+        organization: text('business') || undefined,
+        phone: text('phone') || undefined,
+        email: text('email') || undefined,
+        city: text('city') || undefined,
+        authorized: form.get('authorized') === 'on',
+      });
+      setDone(true);
+      onCreated();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -675,7 +665,7 @@ function NewReferralDialog({ onClose }: { onClose: () => void }) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-200">Nuevo referido</p>
             <h2 id="new-referral-title" className="mt-2 font-display text-2xl font-semibold text-white">
-              {submitted ? 'Simulación completada.' : 'Registrar nuevo referido'}
+              {done ? 'Referido registrado.' : 'Registrar nuevo referido'}
             </h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Cerrar formulario" className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
@@ -683,70 +673,48 @@ function NewReferralDialog({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {submitted ? (
+        {done ? (
           <div className="mt-7 border-t border-white/10 pt-6">
-            <p className="inline-flex rounded-full border border-amber-200/20 bg-amber-200/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-100">Simulación · demostración</p>
-            <div className="mt-4 flex gap-3 text-sm leading-6 text-zinc-300">
+            <div className="flex gap-3 text-sm leading-6 text-zinc-300">
               <Check className="mt-1 h-5 w-5 shrink-0 text-emerald-300" />
-              <p>En el producto final, Charlitron recibiría este referido y le daría seguimiento.</p>
+              <p>Charlitron recibió tu referido y le dará seguimiento. Podrás ver su estado en Recomendaciones.</p>
             </div>
-            <p className="mt-5 text-xs leading-5 text-zinc-500">Prototipo visual: la información ingresada no se envía, no se guarda y no aparece en la lista.</p>
             <button type="button" onClick={onClose} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200">
-              Entendido <ArrowRight className="h-4 w-4" />
+              Listo <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4 border-t border-white/10 pt-6">
             <label className="block text-sm text-zinc-300">
-              Nombre del negocio
-              <input required className={fieldClass} placeholder="Ej. Negocio de ejemplo" />
+              Nombre del contacto
+              <input name="contact" required minLength={2} maxLength={120} autoComplete="off" className={fieldClass} />
+            </label>
+            <label className="block text-sm text-zinc-300">
+              Nombre del negocio <span className="text-zinc-600">(opcional)</span>
+              <input name="business" maxLength={120} className={fieldClass} />
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm text-zinc-300">
-                Nombre del contacto
-                <input required autoComplete="off" className={fieldClass} placeholder="Nombre ficticio" />
-              </label>
               <label className="block text-sm text-zinc-300">
                 WhatsApp o teléfono
-                <input required type="tel" inputMode="tel" pattern="[0-9+()\s\-]{10,}" title="Escribe al menos 10 dígitos" autoComplete="off" className={fieldClass} placeholder="444 000 0000" />
+                <input name="phone" required type="tel" inputMode="tel" maxLength={30} pattern="[0-9+()\s\-]{10,}" title="Escribe al menos 10 dígitos" autoComplete="off" className={fieldClass} placeholder="444 000 0000" />
               </label>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm text-zinc-300">
                 Correo <span className="text-zinc-600">(opcional)</span>
-                <input type="email" autoComplete="off" className={fieldClass} placeholder="contacto@ejemplo.com" />
-              </label>
-              <label className="block text-sm text-zinc-300">
-                Ciudad
-                <input required className={fieldClass} placeholder="Ej. San Luis Potosí" />
+                <input name="email" type="email" maxLength={254} autoComplete="off" className={fieldClass} placeholder="contacto@ejemplo.com" />
               </label>
             </div>
             <label className="block text-sm text-zinc-300">
-              Servicio que necesita
-              <select required defaultValue="" className={selectClass}>
-                <option value="" disabled className={optionClass}>Selecciona un servicio</option>
-                {referralServices.map((service) => <option key={service} value={service} className={optionClass}>{service}</option>)}
-              </select>
-            </label>
-            <label className="block text-sm text-zinc-300">
-              ¿Cómo conoces al prospecto? <span className="text-zinc-600">(opcional)</span>
-              <select defaultValue="" className={selectClass}>
-                <option value="" className={optionClass}>Selecciona una opción</option>
-                {referralRelations.map((relation) => <option key={relation} value={relation} className={optionClass}>{relation}</option>)}
-              </select>
-            </label>
-            <label className="block text-sm text-zinc-300">
-              Comentario <span className="text-zinc-600">(opcional)</span>
-              <textarea rows={3} className={`${fieldClass} py-2`} placeholder="Contexto que ayude a Charlitron" />
+              Ciudad
+              <input name="city" required maxLength={80} className={fieldClass} placeholder="Ej. San Luis Potosí" />
             </label>
             <label className="flex items-start gap-3 pt-1 text-xs leading-5 text-zinc-400">
-              <input required type="checkbox" className="mt-1 accent-amber-300" />
+              <input name="authorized" required type="checkbox" className="mt-1 accent-amber-300" />
               Confirmo que cuento con autorización de esta persona para compartir sus datos de contacto con Charlitron.
             </label>
-            <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
-              Registrar referido <ArrowRight className="h-4 w-4" />
+            {error && <p role="alert" className="rounded-md border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>}
+            <button type="submit" disabled={busy || !repo} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
+              {busy ? 'Enviando…' : 'Registrar referido'} <ArrowRight className="h-4 w-4" />
             </button>
-            <p className="text-center text-[11px] leading-5 text-zinc-600">Demostración: usa datos ficticios. Ningún dato se transmite ni se almacena.</p>
           </form>
         )}
       </section>
@@ -754,46 +722,67 @@ function NewReferralDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ReferralsTable({ showCommission }: { showCommission: boolean }) {
+function ReferralsTable({ referrals, commissions, showCommission }: { referrals: Referral[]; commissions: Commission[]; showCommission: boolean }) {
+  if (referrals.length === 0) {
+    return <p className="border-y border-white/10 px-4 py-8 text-center text-sm text-zinc-500">Todavía no has registrado referidos.</p>;
+  }
   return (
     <div className="overflow-hidden border-y border-white/10">
       <div className="hidden grid-cols-[1.3fr_1.2fr_0.9fr_1fr] gap-4 bg-white/[0.025] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600 md:grid">
-        <span>Negocio / proyecto</span><span>Estado</span><span>Recomendado</span><span>{showCommission ? 'Comisión' : 'Acuerdo'}</span>
+        <span>Contacto / negocio</span><span>Estado</span><span>Recomendado</span><span>{showCommission ? 'Comisión' : 'Contacto'}</span>
       </div>
-      {referrals.map((referral) => (
-        <div key={referral.business} className="grid gap-3 border-t border-white/[0.07] px-4 py-4 first:border-t-0 md:grid-cols-[1.3fr_1.2fr_0.9fr_1fr] md:items-center md:gap-4">
-          <div>
-            <p className="text-sm font-medium text-zinc-200">{referral.business}</p>
-            <p className="mt-1 text-xs text-zinc-600">{referral.project}</p>
+      {referrals.map((referral) => {
+        const commission = commissions.find((item) => item.referral_id === referral.id);
+        return (
+          <div key={referral.id} className="grid gap-3 border-t border-white/[0.07] px-4 py-4 first:border-t-0 md:grid-cols-[1.3fr_1.2fr_0.9fr_1fr] md:items-center md:gap-4">
+            <div>
+              <p className="text-sm font-medium text-zinc-200">{referral.referred_name}</p>
+              {referral.referred_organization && <p className="mt-1 text-xs text-zinc-600">{referral.referred_organization}</p>}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-zinc-400"><span className={`h-1.5 w-1.5 rounded-full ${referral.status === 'closed' ? 'bg-zinc-500' : 'bg-amber-200'}`} />{statusLabel(REFERRAL_STATUS_LABELS, referral.status)}</div>
+            <p className="text-xs text-zinc-600">{formatDate(referral.created_at)}</p>
+            <div>
+              {showCommission ? (
+                <>
+                  <p className="text-xs font-medium text-zinc-300">{commission ? formatMoney(commission.commission_amount) : 'Sin comisión asignada'}</p>
+                  {commission && <p className="mt-1 text-[11px] text-zinc-600">{statusLabel(COMMISSION_STATUS_LABELS, commission.status)}</p>}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-zinc-300">{referral.referred_phone ?? referral.referred_email}</p>
+                  {referral.referred_phone && referral.referred_email && <p className="mt-1 text-[11px] text-zinc-600">{referral.referred_email}</p>}
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-400"><span className={`h-1.5 w-1.5 rounded-full ${referral.status === 'Proyecto cobrado' ? 'bg-emerald-300' : 'bg-amber-200'}`} />{referral.status}</div>
-          <p className="text-xs text-zinc-600">{referral.date}</p>
-          <div>
-            <p className="text-xs font-medium text-zinc-300">{showCommission ? referral.commission : referral.payout}</p>
-            <p className="mt-1 text-[11px] text-zinc-600">{showCommission ? referral.payout : 'Comisión acordada manualmente'}</p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function CommissionList() {
+function CommissionList({ commissions }: { commissions: Commission[] }) {
   return (
     <section>
-      <div className="mb-6 grid gap-5 border-b border-white/10 pb-6 sm:grid-cols-[1fr_1.4fr] sm:items-end">
-        <div>
-          <p className="text-xs text-zinc-500">Acuerdo de ejemplo · Clínica Boreal</p>
-          <p className="mt-2 font-display text-3xl font-semibold text-white">$3,200 <span className="text-base font-medium text-zinc-500">MXN</span></p>
+      {commissions.length === 0 ? (
+        <p className="border-y border-white/10 px-4 py-8 text-center text-sm text-zinc-500">Aún no tienes comisiones asignadas.</p>
+      ) : (
+        <div className="overflow-hidden border-y border-white/10">
+          <div className="hidden grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr] gap-4 bg-white/[0.025] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600 md:grid">
+            <span>Referido</span><span>Acordada</span><span>Pagada</span><span>Pendiente</span><span>Estado</span>
+          </div>
+          {commissions.map((commission) => (
+            <div key={commission.id} className="grid gap-2 border-t border-white/[0.07] px-4 py-4 first:border-t-0 md:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr] md:items-center md:gap-4">
+              <p className="text-sm font-medium text-zinc-200">{commission.referred_name}</p>
+              <p className="text-xs text-zinc-300">{formatMoney(commission.commission_amount)}</p>
+              <p className="text-xs text-emerald-300">{formatMoney(commission.paid_total)}</p>
+              <p className="text-xs text-zinc-300">{formatMoney(commission.balance)}</p>
+              <p className="text-xs text-zinc-400">{statusLabel(COMMISSION_STATUS_LABELS, commission.status)}</p>
+            </div>
+          ))}
         </div>
-        <div className="flex items-start gap-3 text-sm leading-6 text-zinc-400">
-          <Clock3 className="mt-1 h-4 w-4 shrink-0 text-amber-200" />
-          <p>El cliente ya pagó el proyecto. La liberación de la comisión está pendiente de gestión manual por Charlitron.</p>
-        </div>
-      </div>
-      <h2 className="mb-3 font-display text-lg font-semibold text-white">Historial de acuerdos</h2>
-      <ReferralsTable showCommission />
-      <p className="mt-4 text-xs leading-5 text-zinc-600">Los montos y negocios son ficticios. Charlitron asigna cada comisión de forma manual según las condiciones acordadas y solo puede liberarla después de recibir el pago del cliente.</p>
+      )}
+      <p className="mt-4 text-xs leading-5 text-zinc-600">Charlitron asigna y paga cada comisión de forma manual según lo acordado, y solo puede liberarla después de recibir el pago del cliente.</p>
     </section>
   );
 }

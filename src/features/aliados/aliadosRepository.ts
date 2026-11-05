@@ -1,6 +1,7 @@
 /**
- * Repository layer for Aliados Charlitron
- * Manages all database operations with RLS security
+ * Capa de datos de Aliados Charlitron.
+ * Las tablas no tienen permisos directos: el aliado lee solo vistas ally_my_*, el administrador vistas admin_*,
+ * y toda escritura pasa por funciones SECURITY DEFINER (ver supabase/proposals/aliados-lab-0002-operations.sql).
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -11,12 +12,11 @@ export interface AllyRegistration {
   phone?: string;
   full_name: string;
   city?: string;
-  share_data_agreed: boolean;
+  consent_at: string;
   created_at: string;
-  expires_at: string;
-  approved_by?: string;
-  approved_at?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  reviewed_at?: string;
+  rejection_reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
   user_id?: string;
 }
 
@@ -31,32 +31,36 @@ export interface AllyProfile {
   created_at: string;
 }
 
+// Lo que ve el aliado (ally_my_referrals): sin notas internas ni datos de revision.
 export interface Referral {
   id: string;
-  ally_id: string;
   referred_name: string;
   referred_email?: string;
   referred_phone?: string;
   referred_city?: string;
   referred_organization?: string;
-  relationship?: string;
-  source?: string;
   data_share_authorized: boolean;
-  notes_private?: string;
   status: 'new' | 'contacted' | 'interested' | 'closed' | 'duplicate';
-  duplicate_of?: string;
   created_at: string;
-  modified_at: string;
+  updated_at: string;
+}
+
+// Lo que ve el administrador (admin_referrals).
+export interface AdminReferral extends Referral {
+  ally_id: string;
+  internal_notes?: string;
+  duplicate_review: boolean;
+  duplicate_of?: string;
 }
 
 export interface Sale {
   id: string;
-  referral_id?: string;
+  referral_id: string;
   ally_id: string;
   sale_date: string;
   amount_agreed: number;
   sale_description?: string;
-  recorded_at: string;
+  internal_notes?: string;
 }
 
 export interface Payment {
@@ -66,18 +70,32 @@ export interface Payment {
   amount_paid: number;
   payment_method: string;
   reference_number?: string;
-  confirmed_at: string;
+  reversed_at?: string;
 }
 
-export interface Commission {
+export interface AdminCommission {
   id: string;
   sale_id: string;
   ally_id: string;
-  commission_percentage: number;
   commission_amount: number;
-  status: 'assigned' | 'approved' | 'partially_paid' | 'paid' | 'cancelled';
+  status: 'assigned' | 'authorized';
   assigned_at: string;
-  approved_at?: string;
+  authorized_at?: string;
+  net_collected: number;
+  release_limit: number;
+  paid_total: number;
+}
+
+// Lo que ve el aliado (ally_my_commissions): sin cobros, limites ni datos de la venta.
+export interface Commission {
+  id: string;
+  referral_id: string;
+  referred_name: string;
+  commission_amount: number;
+  status: 'assigned' | 'authorized';
+  paid_total: number;
+  balance: number;
+  assigned_at: string;
 }
 
 export interface CommissionPayment {
@@ -85,360 +103,212 @@ export interface CommissionPayment {
   commission_id: string;
   payment_date: string;
   amount_paid: number;
-  payment_method: string;
-  authorized_at: string;
-  confirmed_at?: string;
+  payment_method?: string;
+  reference_number?: string;
+}
+
+async function rows<T>(query: PromiseLike<{ data: unknown; error: { message: string } | null }>, what: string): Promise<T[]> {
+  const { data, error } = await query;
+  if (error) throw new Error(`No se pudo cargar ${what}: ${error.message}`);
+  return (data ?? []) as T[];
+}
+
+async function call<T>(query: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T> {
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data as T;
 }
 
 export class AliadosRepository {
   constructor(private client: SupabaseClient) {}
 
-  // ============================================
-  // ALLY PROFILES
-  // ============================================
+  // ---------------- Administrador (vistas admin_*) ----------------
 
-  async listAllies() {
-    const { data, error } = await this.client
-      .from('ally_profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw new Error(`Failed to list allies: ${error.message}`);
-    return data as AllyProfile[];
+  listAllies() {
+    return rows<AllyProfile>(this.client.from('admin_allies').select('*').order('created_at', { ascending: false }), 'aliados');
   }
 
-  async listRegistrations() {
-    const { data, error } = await this.client
-      .from('ally_registrations')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw new Error(`Failed to list registrations: ${error.message}`);
-    return data as AllyRegistration[];
-  }
-
-  async getAllyById(userId: string) {
+  async getOwnProfile(userId: string): Promise<AllyProfile | null> {
     const { data, error } = await this.client
       .from('ally_profiles')
-      .select('*')
+      .select('user_id,display_name,phone,city,status,approved_at,created_at')
       .eq('user_id', userId)
-      .single();
-
-    if (error) throw new Error(`Failed to get ally: ${error.message}`);
-    return data as AllyProfile;
+      .maybeSingle();
+    if (error) throw new Error(`No se pudo cargar tu perfil: ${error.message}`);
+    return (data as AllyProfile | null) ?? null;
   }
 
-  async updateAllyStatus(userId: string, status: 'pending' | 'active' | 'paused', changedBy: string) {
-    const { error } = await this.client
-      .from('ally_profiles')
-      .update({ status, status_changed_by: changedBy, status_changed_at: new Date().toISOString() })
-      .eq('user_id', userId);
-
-    if (error) throw new Error(`Failed to update ally status: ${error.message}`);
+  listRegistrations() {
+    return rows<AllyRegistration>(
+      this.client.from('admin_registrations').select('*').order('created_at', { ascending: false }),
+      'solicitudes',
+    );
   }
 
-  // ============================================
-  // REFERRALS
-  // ============================================
-
-  async listReferrals() {
-    const { data, error } = await this.client
-      .from('referrals')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw new Error(`Failed to list referrals: ${error.message}`);
-    return data as Referral[];
+  listReferrals() {
+    return rows<AdminReferral>(this.client.from('admin_referrals').select('*').order('created_at', { ascending: false }), 'referidos');
   }
 
-  async createReferral(referral: Omit<Referral, 'id' | 'created_at' | 'modified_at'>, createdBy: string) {
-    const { data, error } = await this.client
-      .from('referrals')
-      .insert([{ ...referral, created_by: createdBy, modified_by: createdBy }])
-      .select()
-      .single();
-
-    if (error) throw new Error(`Failed to create referral: ${error.message}`);
-    return data as Referral;
+  listSales() {
+    return rows<Sale>(this.client.from('admin_sales').select('*').order('sale_date', { ascending: false }), 'ventas');
   }
 
-  async listReferralsByAlly(allyId: string) {
-    const { data, error } = await this.client
-      .from('referrals')
-      .select('*')
-      .eq('ally_id', allyId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw new Error(`Failed to list referrals: ${error.message}`);
-    return data as Referral[];
+  listPayments() {
+    return rows<Payment>(this.client.from('admin_payments').select('*').order('payment_date', { ascending: false }), 'cobros');
   }
 
-  async getReferralById(referralId: string) {
-    const { data, error } = await this.client
-      .from('referrals')
-      .select('*')
-      .eq('id', referralId)
-      .single();
-
-    if (error) throw new Error(`Failed to get referral: ${error.message}`);
-    return data as Referral;
+  listCommissions() {
+    return rows<AdminCommission>(
+      this.client.from('admin_commissions').select('*').order('assigned_at', { ascending: false }),
+      'comisiones',
+    );
   }
 
-  async updateReferral(referralId: string, updates: Partial<Referral>, modifiedBy: string) {
-    const { error } = await this.client
-      .from('referrals')
-      .update({ ...updates, modified_by: modifiedBy, modified_at: new Date().toISOString() })
-      .eq('id', referralId);
-
-    if (error) throw new Error(`Failed to update referral: ${error.message}`);
+  listCommissionPayments() {
+    return rows<CommissionPayment>(
+      this.client.from('admin_commission_payments').select('*').is('reversed_at', null).order('payment_date', { ascending: false }),
+      'pagos de comision',
+    );
   }
 
-  async markReferralAsDuplicate(referralId: string, duplicateOf: string, modifiedBy: string) {
-    const { error } = await this.client
-      .from('referrals')
-      .update({ status: 'duplicate', duplicate_of: duplicateOf, modified_by: modifiedBy, modified_at: new Date().toISOString() })
-      .eq('id', referralId);
+  // ---------------- Aliado (vistas ally_my_*) ----------------
 
-    if (error) throw new Error(`Failed to mark referral as duplicate: ${error.message}`);
+  listMyReferrals() {
+    return rows<Referral>(this.client.from('ally_my_referrals').select('*').order('created_at', { ascending: false }), 'tus referidos');
   }
 
-  // ============================================
-  // SALES
-  // ============================================
-
-  async listSales() {
-    const { data, error } = await this.client
-      .from('sales')
-      .select('*')
-      .order('sale_date', { ascending: false });
-
-    if (error) throw new Error(`Failed to list sales: ${error.message}`);
-    return data as Sale[];
+  listMyCommissions() {
+    return rows<Commission>(
+      this.client.from('ally_my_commissions').select('*').order('assigned_at', { ascending: false }),
+      'tus comisiones',
+    );
   }
 
-  async listSalesByAlly(allyId: string) {
-    const { data, error } = await this.client
-      .from('sales')
-      .select('*')
-      .eq('ally_id', allyId)
-      .order('sale_date', { ascending: false });
+  // ---------------- Escrituras: solo funciones ----------------
 
-    if (error) throw new Error(`Failed to list sales: ${error.message}`);
-    return data as Sale[];
+  async submitReferral(input: {
+    name: string;
+    email?: string;
+    phone?: string;
+    city?: string;
+    organization?: string;
+    authorized: boolean;
+  }): Promise<string> {
+    return call<string>(
+      this.client.rpc('submit_referral', {
+        p_name: input.name,
+        p_email: input.email ?? null,
+        p_phone: input.phone ?? null,
+        p_city: input.city ?? null,
+        p_organization: input.organization ?? null,
+        p_authorized: input.authorized,
+      }),
+    );
   }
 
-  async getSaleById(saleId: string) {
-    const { data, error } = await this.client
-      .from('sales')
-      .select('*')
-      .eq('id', saleId)
-      .single();
-
-    if (error) throw new Error(`Failed to get sale: ${error.message}`);
-    return data as Sale;
-  }
-
-  // ============================================
-  // PAYMENTS
-  // ============================================
-
-  async listPayments() {
-    const { data, error } = await this.client
-      .from('payments')
-      .select('*')
-      .order('payment_date', { ascending: false });
-
-    if (error) throw new Error(`Failed to list payments: ${error.message}`);
-    return data as Payment[];
-  }
-
-  async listPaymentsBySale(saleId: string) {
-    const { data, error } = await this.client
-      .from('payments')
-      .select('*')
-      .eq('sale_id', saleId)
-      .is('reversed_at', null)
-      .order('payment_date', { ascending: false });
-
-    if (error) throw new Error(`Failed to list payments: ${error.message}`);
-    return data as Payment[];
-  }
-
-  async getTotalPaidBySale(saleId: string): Promise<number> {
-    const { data, error } = await this.client
-      .from('payments')
-      .select('amount_paid')
-      .eq('sale_id', saleId)
-      .is('reversed_at', null);
-
-    if (error) throw new Error(`Failed to get payments: ${error.message}`);
-    return (data as Payment[]).reduce((sum, p) => sum + p.amount_paid, 0);
-  }
-
-  // ============================================
-  // COMMISSIONS
-  // ============================================
-
-  async listCommissions() {
-    const { data, error } = await this.client
-      .from('commissions')
-      .select('*')
-      .order('assigned_at', { ascending: false });
-
-    if (error) throw new Error(`Failed to list commissions: ${error.message}`);
-    return data as Commission[];
-  }
-
-  async listCommissionPayments() {
-    const { data, error } = await this.client
-      .from('commission_payments')
-      .select('*')
-      .order('payment_date', { ascending: false });
-
-    if (error) throw new Error(`Failed to list commission payments: ${error.message}`);
-    return data as CommissionPayment[];
-  }
-
-  async listCommissionsByAlly(allyId: string) {
-    const { data, error } = await this.client
-      .from('commissions')
-      .select('*')
-      .eq('ally_id', allyId)
-      .order('assigned_at', { ascending: false });
-
-    if (error) throw new Error(`Failed to list commissions: ${error.message}`);
-    return data as Commission[];
-  }
-
-  async getCommissionById(commissionId: string) {
-    const { data, error } = await this.client
-      .from('commissions')
-      .select('*')
-      .eq('id', commissionId)
-      .single();
-
-    if (error) throw new Error(`Failed to get commission: ${error.message}`);
-    return data as Commission;
-  }
-
-  async listCommissionPaymentsByCommission(commissionId: string) {
-    const { data, error } = await this.client
-      .from('commission_payments')
-      .select('*')
-      .eq('commission_id', commissionId)
-      .is('reversed_at', null)
-      .order('payment_date', { ascending: false });
-
-    if (error) throw new Error(`Failed to list commission payments: ${error.message}`);
-    return data as CommissionPayment[];
-  }
-
-  async getTotalCommissionPaid(commissionId: string): Promise<number> {
-    const { data, error } = await this.client
-      .from('commission_payments')
-      .select('amount_paid')
-      .eq('commission_id', commissionId)
-      .is('reversed_at', null);
-
-    if (error) throw new Error(`Failed to get commission payments: ${error.message}`);
-    return (data as CommissionPayment[]).reduce((sum, p) => sum + p.amount_paid, 0);
-  }
-
-  // ============================================
-  // ADMIN FUNCTIONS (via RLS-secured functions)
-  // ============================================
-
+  // La cuenta Auth se crea en el backend con la Auth Admin API; el navegador nunca ve la service role key.
   async approveRegistration(registrationId: string): Promise<void> {
-    // Usar función segura: approve_registration_and_create_user
-    // Crea user Auth + ally_profile atómicamente, auditable
-    const { data, error } = await this.client.rpc('approve_registration_and_create_user', {
-      p_registration_id: registrationId,
+    const { data } = await this.client.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error('Sesión no válida. Vuelve a iniciar sesión.');
+    const response = await fetch('/api/aliados-approve-registration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ registration_id: registrationId }),
     });
-
-    if (error) throw new Error(`Failed to approve registration: ${error.message}`);
-    if (!data?.success) throw new Error('Approval failed');
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(approvalErrorMessage(body.error));
+    }
   }
 
-  async rejectRegistration(registrationId: string, reason: string): Promise<void> {
-    const { error } = await this.client.rpc('reject_registration', {
-      reg_id: registrationId,
-      rejector_id: (await this.client.auth.getUser()).data.user?.id,
-      reason,
-    });
-
-    if (error) throw new Error(`Failed to reject registration: ${error.message}`);
+  rejectRegistration(registrationId: string, reason: string) {
+    return call<void>(this.client.rpc('admin_reject_registration', { p_registration_id: registrationId, p_reason: reason }));
   }
 
-  async recordSale(allyId: string, amount: number, description: string, internalNotes: string): Promise<string> {
-    const userId = (await this.client.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error('No authenticated user');
-
-    const { data, error } = await this.client.rpc('record_sale', {
-      p_ally_id: allyId,
-      p_amount: amount,
-      p_description: description,
-      p_internal_notes: internalNotes,
-      p_recorded_by: userId,
-    });
-
-    if (error) throw new Error(`Failed to record sale: ${error.message}`);
-    return data as string;
+  setReferralStatus(referralId: string, status: AdminReferral['status'], notes?: string, duplicateOf?: string) {
+    return call<void>(
+      this.client.rpc('admin_set_referral_status', {
+        p_referral_id: referralId,
+        p_status: status,
+        p_notes: notes ?? null,
+        p_duplicate_of: duplicateOf ?? null,
+      }),
+    );
   }
 
-  async recordPayment(saleId: string, amount: number, method: string, reference?: string): Promise<string> {
-    const userId = (await this.client.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error('No authenticated user');
-
-    const { data, error } = await this.client.rpc('record_payment', {
-      p_sale_id: saleId,
-      p_amount: amount,
-      p_method: method,
-      p_confirmed_by: userId,
-      p_reference: reference,
-    });
-
-    if (error) throw new Error(`Failed to record payment: ${error.message}`);
-    return data as string;
+  recordSale(referralId: string, amount: number, description?: string, internalNotes?: string) {
+    return call<string>(
+      this.client.rpc('admin_record_sale', {
+        p_referral_id: referralId,
+        p_amount: amount,
+        p_description: description ?? null,
+        p_notes: internalNotes ?? null,
+      }),
+    );
   }
 
-  async assignCommission(saleId: string, percentage: number): Promise<string> {
-    const userId = (await this.client.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error('No authenticated user');
-
-    const { data, error } = await this.client.rpc('assign_commission', {
-      p_sale_id: saleId,
-      p_percentage: percentage,
-      p_assigned_by: userId,
-    });
-
-    if (error) throw new Error(`Failed to assign commission: ${error.message}`);
-    return data as string;
+  correctSale(saleId: string, newAmount: number, reason: string) {
+    return call<void>(this.client.rpc('admin_correct_sale', { p_sale_id: saleId, p_new_amount: newAmount, p_reason: reason }));
   }
 
-  async payCommission(commissionId: string, amount: number): Promise<string> {
-    // Usar función segura: pay_commission_safe
-    // Valida: no supera monto acordado, respeta proporción de cobros, detecta duplicados
-    const { data, error } = await this.client.rpc('pay_commission_safe', {
-      p_commission_id: commissionId,
-      p_amount: amount,
-    });
-
-    if (error) throw new Error(`Failed to pay commission: ${error.message}`);
-    const result = data as { success: boolean; payment_id: string; error?: string };
-    if (!result.success) throw new Error(result.error || 'Commission payment failed');
-    return result.payment_id;
+  // idempotencyKey: genera una por envío del formulario (crypto.randomUUID()) para que un reintento no duplique.
+  recordPayment(saleId: string, amount: number, idempotencyKey: string, method: string, reference?: string, notes?: string) {
+    return call<string>(
+      this.client.rpc('admin_record_payment', {
+        p_sale_id: saleId,
+        p_amount: amount,
+        p_idempotency_key: idempotencyKey,
+        p_method: method,
+        p_reference: reference ?? null,
+        p_notes: notes ?? null,
+      }),
+    );
   }
 
-  async reverseCommissionPayment(paymentId: string, reason?: string): Promise<void> {
-    // Usar función segura: reverse_commission_payment
-    // SOFT reversal: no borra, solo marca reversed_at + audita
-    const { data, error } = await this.client.rpc('reverse_commission_payment', {
-      p_payment_id: paymentId,
-      p_reason: reason,
-    });
+  reversePayment(paymentId: string, reason: string) {
+    return call<void>(this.client.rpc('admin_reverse_payment', { p_payment_id: paymentId, p_reason: reason }));
+  }
 
-    if (error) throw new Error(`Failed to reverse payment: ${error.message}`);
-    const result = data as { success: boolean };
-    if (!result.success) throw new Error('Reversal failed');
+  assignCommission(saleId: string, amount: number) {
+    return call<string>(this.client.rpc('admin_assign_commission', { p_sale_id: saleId, p_amount: amount }));
+  }
+
+  authorizeCommission(commissionId: string) {
+    return call<void>(this.client.rpc('admin_authorize_commission', { p_commission_id: commissionId }));
+  }
+
+  payCommission(commissionId: string, amount: number, idempotencyKey: string, method: string, reference?: string, notes?: string) {
+    return call<string>(
+      this.client.rpc('admin_pay_commission', {
+        p_commission_id: commissionId,
+        p_amount: amount,
+        p_idempotency_key: idempotencyKey,
+        p_method: method,
+        p_reference: reference ?? null,
+        p_notes: notes ?? null,
+      }),
+    );
+  }
+
+  reverseCommissionPayment(paymentId: string, reason: string) {
+    return call<void>(this.client.rpc('admin_reverse_commission_payment', { p_payment_id: paymentId, p_reason: reason }));
+  }
+}
+
+function approvalErrorMessage(code?: string): string {
+  switch (code) {
+    case 'forbidden':
+      return 'Solo un administrador puede aprobar solicitudes.';
+    case 'invalid_token':
+      return 'Sesión no válida. Vuelve a iniciar sesión.';
+    case 'registration_not_found':
+      return 'La solicitud ya no está pendiente.';
+    case 'email_already_registered':
+      return 'Ese correo ya tiene una cuenta. Revísalo en Supabase Auth.';
+    case 'auth_admin_not_configured':
+      return 'El servidor aún no tiene configurada la clave de administración de Auth.';
+    default:
+      return 'No se pudo aprobar la solicitud. No se hizo ningún cambio.';
   }
 }
