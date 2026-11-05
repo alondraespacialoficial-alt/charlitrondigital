@@ -98,20 +98,39 @@ test('un solo correo de contacto y ninguno ficticio o sin confirmar', () => {
   assert.deepEqual([...emails], [CONTACT_EMAIL]);
 });
 
-test('el domicilio fiscal se publica solo con autorizacion expresa y nunca junto a CURP, idCIF ni RFC', () => {
+test('el domicilio fiscal autorizado aparece solo en los dos avisos de privacidad y nunca junto a CURP, idCIF ni RFC', () => {
+  assert.ok(LEGAL_ADDRESS_PUBLICATION_AUTHORIZED);
+  assert.equal(LEGAL_FISCAL_ADDRESS, 'Calle Lanzagorta 330, colonia San Sebastián, C.P. 78349, San Luis Potosí, San Luis Potosí, México');
+  const general = render(createElement(LegalPage, { initialTab: 'privacidad', onBack: () => {} }));
+  const aliados = render(createElement(AllyLegalPage, { kind: 'privacy' }));
+  assert.ok(general.includes(LEGAL_FISCAL_ADDRESS ?? ''), 'aviso general');
+  assert.ok(aliados.includes(LEGAL_FISCAL_ADDRESS ?? ''), 'aviso de Aliados');
+  assert.equal(/domicilio fiscal por confirmar/.test(aliados), false);
+
+  const elsewhere = [
+    render(createElement(LegalPage, { initialTab: 'terminos', onBack: () => {} })),
+    render(createElement(LegalPage, { initialTab: 'cookies', onBack: () => {} })),
+    render(createElement(AllyLegalPage, { kind: 'terms' })),
+    render(createElement(AlliesLanding)),
+    render(createElement(AllyRegistrationPage)),
+    JSON.stringify(TERMS_SECTIONS),
+  ];
+  for (const html of elsewhere) assert.equal(/Lanzagorta|78349|San Sebasti/.test(html), false, 'el domicilio solo va en los avisos de privacidad');
+
   const text = ALL_LEGAL_TEXT();
   assert.equal(/\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b/.test(text), false, 'CURP');
   assert.equal(/\b[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}\b/.test(text), false, 'RFC');
   assert.equal(/idCIF|constancia de situaci/i.test(text), false);
-  assert.match(LEGAL_FISCAL_ADDRESS ?? '', /Lanzagorta 330, colonia San Sebastián, C\.P\. 78349, San Luis Potosí/);
   assert.equal(/CURP|idCIF|RFC/i.test(LEGAL_FISCAL_ADDRESS ?? ''), false);
-  assert.ok(LEGAL_PENDING.some((item) => /Autorización expresa .* domicilio fiscal/.test(item)));
-  if (LEGAL_ADDRESS_PUBLICATION_AUTHORIZED) {
-    assert.match(text, /Lanzagorta 330/);
-  } else {
-    assert.equal(/Lanzagorta|78349|San Sebasti/.test(text), false, 'el domicilio no se muestra sin autorizacion');
-    assert.match(text, /domicilio fiscal por confirmar/);
+});
+
+test('la autorizacion del domicilio ya no es pendiente, pero los demas pendientes legales se conservan', () => {
+  assert.equal(LEGAL_PENDING.some((item) => /domicilio fiscal/i.test(item) && /autorizaci/i.test(item)), false);
+  for (const topic of [/Constancia escrita/, /José Adrián/, /Canal de privacidad/, /ARCO/, /Conservación/, /Cancelación frente/, /Transferencias/, /personas recomendadas/, /Documentación fiscal/, /Acuerdo escrito/, /Plazos de aviso/, /Ley aplicable/, /Revisión y firma/]) {
+    assert.ok(LEGAL_PENDING.some((item) => topic.test(item)), `pendiente: ${topic}`);
   }
+  assert.equal(LEGAL_PENDING.length, 13);
+  assert.equal(ALIADOS_LEGAL_APPROVED, false);
 });
 
 test('los tratamientos del aviso general y del aviso de Aliados permanecen separados', () => {

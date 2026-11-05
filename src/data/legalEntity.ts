@@ -6,8 +6,8 @@ export const LEGAL_LOCATION = 'San Luis Potosí, S.L.P., México';
 // Domicilio fiscal capturado de la constancia (solo calle, colonia, C.P. y ciudad; sin CURP, RFC, idCIF ni copias).
 export const LEGAL_FISCAL_ADDRESS: string | null =
   'Calle Lanzagorta 330, colonia San Sebastián, C.P. 78349, San Luis Potosí, San Luis Potosí, México';
-// No pasar a true sin la autorización expresa de Carlos Leonardo Álvarez Cedillo para publicarlo como domicilio del responsable.
-export const LEGAL_ADDRESS_PUBLICATION_AUTHORIZED = false;
+// Carlos Leonardo Álvarez Cedillo autorizó expresamente publicarlo como domicilio del responsable en los avisos de privacidad.
+export const LEGAL_ADDRESS_PUBLICATION_AUTHORIZED = true;
 export const LEGAL_ADDRESS_LINE = LEGAL_ADDRESS_PUBLICATION_AUTHORIZED && LEGAL_FISCAL_ADDRESS ? LEGAL_FISCAL_ADDRESS : LEGAL_LOCATION;
 
 // Administrador operativo del programa Aliados (no es el responsable legal).

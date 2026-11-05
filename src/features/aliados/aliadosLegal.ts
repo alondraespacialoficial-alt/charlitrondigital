@@ -16,7 +16,6 @@ export const ALIADOS_PRIVACY_CONTACT = CONTACT_EMAIL;
 
 // Puntos que requieren revision juridica o datos que aun no constan. No deben resolverse por suposicion.
 export const LEGAL_PENDING: readonly string[] = [
-  'Autorización expresa de Carlos Leonardo Álvarez Cedillo para publicar su domicilio fiscal como domicilio del responsable del tratamiento. El domicilio ya está capturado en src/data/legalEntity.ts pero no se muestra hasta activar LEGAL_ADDRESS_PUBLICATION_AUTHORIZED. No publicar CURP, RFC, idCIF ni copias de la constancia.',
   'Constancia escrita de la designación de Carlos Leonardo Álvarez Cedillo como titular fiscal y responsable legal, y de su aceptación.',
   'Relación de José Adrián Álvarez Carlos con el tratamiento de datos (administra el programa): confirmar si actúa como personal del responsable o como encargado, y ajustar la redacción.',
   'Canal de privacidad y ARCO: nadrian18@gmail.com es el correo propuesto; confirmar que es el canal oficial del responsable, ya que corresponde al administrador del programa.',

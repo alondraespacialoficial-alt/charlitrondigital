@@ -20,7 +20,7 @@ Los textos publicados viven en el código y son la fuente única; este documento
 - **Responsable legal y titular fiscal**: Carlos Leonardo Álvarez Cedillo, persona física, con su consentimiento. Sustituye a la identificación anterior ("José Adrián Álvarez Carlos y/o Charlitron Digital S.A. de C.V."), que se retiró del aviso general y del borrador de Aliados.
 - **Administrador de Aliados Charlitron**: José Adrián Álvarez Carlos, director comercial. Figura solo con ese rol en el aviso y los términos de Aliados.
 - **Contacto propuesto** (privacidad, ARCO y dudas legales): `nadrian18@gmail.com`, tomado de `CONTACT_EMAIL`. Se eliminaron `privacidad@charlitrondigital.com` y `aliados@charlitron.com`, que no estaban confirmados.
-- **Domicilio fiscal**: Calle Lanzagorta 330, colonia San Sebastián, C.P. 78349, San Luis Potosí, San Luis Potosí, México (tomado de la Constancia de Situación Fiscal). Está capturado en `LEGAL_FISCAL_ADDRESS`, pero **no se publica** hasta contar con la autorización expresa de Carlos Leonardo Álvarez Cedillo para usarlo como domicilio del responsable del tratamiento (art. 16 LFPDPPP). Mientras `LEGAL_ADDRESS_PUBLICATION_AUTHORIZED` sea `false`, los textos muestran solo "San Luis Potosí, S.L.P., México" y el aviso de Aliados indica "domicilio fiscal por confirmar". Aprobar los textos exige activar esa llave.
+- **Domicilio fiscal**: Calle Lanzagorta 330, colonia San Sebastián, C.P. 78349, San Luis Potosí, San Luis Potosí, México (tomado de la Constancia de Situación Fiscal). Capturado en `LEGAL_FISCAL_ADDRESS`. Carlos Leonardo Álvarez Cedillo **autorizó expresamente** publicarlo como domicilio del responsable (art. 16 LFPDPPP), por lo que `LEGAL_ADDRESS_PUBLICATION_AUTHORIZED = true`. Se muestra únicamente en el aviso de privacidad general y en el de Aliados; no aparece en términos, cookies, landing ni formularios.
 - **No se incorporan** CURP, RFC, idCIF ni copias de la constancia; una prueba lo verifica.
 
 No se modificaron créditos de autoría ni los pies de página con la marca "Charlitron Digital" (son marca, no identificación del responsable).
@@ -49,7 +49,7 @@ No se modificaron créditos de autoría ni los pies de página con la marca "Cha
 
 Lista completa y vigente en `LEGAL_PENDING`. Resumen:
 
-1. Autorización expresa para publicar el domicilio fiscal como domicilio del responsable, y constancia escrita de su designación.
+1. Constancia escrita de la designación del responsable y de su aceptación (la autorización de publicar el domicilio ya fue otorgada).
 2. Relación de José Adrián con el tratamiento (personal del responsable o encargado).
 3. Confirmar el canal oficial de privacidad (el correo propuesto es el del administrador del programa).
 4. Procedimiento, medio y plazos ARCO; revocación del consentimiento; derechos adicionales.
@@ -67,7 +67,7 @@ Lista completa y vigente en `LEGAL_PENDING`. Resumen:
 
 Requiere **ambas** llaves; ninguna está abierta:
 
-1. `ALIADOS_LEGAL_APPROVED = true` en `aliadosLegal.ts` (solo con `LEGAL_PENDING` vacío y `LEGAL_ADDRESS_PUBLICATION_AUTHORIZED = true`; una prueba lo exige).
+1. `ALIADOS_LEGAL_APPROVED = true` en `aliadosLegal.ts` (solo con `LEGAL_PENDING` vacío; una prueba lo exige).
 2. `aliados_settings.registration_open = true` en la base, con la migración `aliados-lab-0004-registration.sql` instalada.
 
 Además: configurar en el Supabase de Aliados las Redirect URLs (`/aliados/activar`), SMTP propio y la vigencia de las invitaciones, y probar una invitación real.
