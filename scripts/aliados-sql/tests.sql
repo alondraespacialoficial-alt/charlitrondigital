@@ -349,17 +349,18 @@ DECLARE
   v_expected text[] := ARRAY['admin_assign_commission', 'admin_authorize_commission', 'admin_correct_sale',
     'admin_finalize_registration', 'admin_pay_commission', 'admin_record_payment', 'admin_record_sale',
     'admin_registration_for_approval', 'admin_reject_registration', 'admin_reverse_commission_payment',
-    'admin_reverse_payment', 'admin_set_ally_status', 'admin_set_referral_status', 'submit_ally_registration', 'submit_referral'];
+    'admin_reverse_payment', 'admin_set_ally_status', 'admin_set_referral_status', 'aliados_registration_open',
+    'submit_ally_registration', 'submit_referral'];
 BEGIN
   PERFORM harness.must((SELECT array_agg(p.proname::text ORDER BY p.proname::text COLLATE "C")
                         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                         WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)'
                           AND has_function_privilege('authenticated', p.oid, 'EXECUTE')) = v_expected,
-    'authenticated ejecuta exactamente las 15 funciones publicas; ningun ayudante interno');
-  PERFORM harness.must((SELECT array_agg(p.proname::text) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    'authenticated ejecuta exactamente las 16 funciones publicas; ningun ayudante interno');
+  PERFORM harness.must((SELECT array_agg(p.proname::text ORDER BY p.proname::text COLLATE "C") FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                         WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)'
-                          AND has_function_privilege('anon', p.oid, 'EXECUTE')) = ARRAY['submit_ally_registration'],
-    'anon solo ejecuta submit_ally_registration');
+                          AND has_function_privilege('anon', p.oid, 'EXECUTE')) = ARRAY['aliados_registration_open', 'submit_ally_registration'],
+    'anon solo ejecuta aliados_registration_open y submit_ally_registration');
   PERFORM harness.must(NOT EXISTS (
       SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r'
@@ -505,7 +506,133 @@ BEGIN
   PERFORM harness.must((SELECT fp FROM harness.fingerprint) = harness.compute_fp(), 'huellas de 0001/plataforma intactas tras 0003');
   PERFORM harness.must((SELECT array_agg(p.proname::text ORDER BY p.proname::text COLLATE "C") FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                         WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)' AND has_function_privilege('anon', p.oid, 'EXECUTE'))
-                       = ARRAY['submit_ally_registration'], 'anon sigue ejecutando solo submit_ally_registration');
+                       = ARRAY['aliados_registration_open', 'submit_ally_registration'], 'anon sigue ejecutando solo las dos funciones publicas de registro');
   PERFORM harness.must(NOT has_any_column_privilege('authenticated', 'public.ally_profiles', 'UPDATE'),
     'authenticated no tiene UPDATE directo sobre ally_profiles');
+END $$;
+
+-- 12. 0004: registro publico con limites anti-abuso (el registro lo abre el propietario; 0004 no lo abre).
+DO $$
+BEGIN
+  PERFORM harness.as_anon();
+  PERFORM harness.must(public.aliados_registration_open() IS TRUE, 'anon ve que el registro esta abierto');
+  PERFORM harness.expect_error('SELECT * FROM public.aliados_settings', '42501');
+  RESET ROLE;
+  UPDATE public.aliados_settings SET registration_open = false;
+  PERFORM harness.as_anon();
+  PERFORM harness.must(public.aliados_registration_open() IS FALSE, 'anon ve que el registro esta cerrado');
+  PERFORM harness.expect_error($q$SELECT public.submit_ally_registration('cerrado@test.local','Persona Cerrada','5551234567','CDMX',true)$q$, 'P0001');
+  RESET ROLE;
+  UPDATE public.aliados_settings SET registration_open = true;
+  PERFORM harness.must(NOT EXISTS (SELECT 1 FROM public.ally_registrations WHERE email = 'cerrado@test.local'),
+    'con el registro cerrado no se guarda nada');
+END $$;
+
+DO $$
+BEGIN
+  PERFORM harness.as_anon();
+  PERFORM harness.expect_error($q$SELECT public.submit_ally_registration('tel1@test.local','Telefono Corto','123','CDMX',true)$q$, '23514');
+  PERFORM harness.expect_error($q$SELECT public.submit_ally_registration('tel2@test.local','Telefono Letras','abcdefghij','CDMX',true)$q$, '23514');
+  PERFORM harness.expect_error($q$SELECT public.submit_ally_registration('tel3@test.local','Telefono Largo','5551234567890123','CDMX',true)$q$, '23514');
+  PERFORM public.submit_ally_registration('tel4@test.local', 'Telefono Valido', '+52 (444) 123-4567', 'San Luis Potosi', true);
+  RESET ROLE;
+  PERFORM harness.must((SELECT count(*) FROM public.ally_registrations WHERE email LIKE 'tel_@test.local') = 1
+                       AND EXISTS (SELECT 1 FROM public.ally_registrations WHERE email = 'tel4@test.local' AND status = 'pending'),
+    'WhatsApp invalido rechazado; uno valido se guarda como pendiente');
+END $$;
+
+DO $$
+BEGIN
+  -- Enfriamiento: un correo rechazado hace poco no genera otra solicitud y la respuesta es identica.
+  PERFORM harness.as_anon();
+  PERFORM public.submit_ally_registration('rechazar@test.local', 'Persona Rechazada', '5551112222', 'CDMX', true);
+  RESET ROLE;
+  PERFORM harness.must((SELECT count(*) FROM public.ally_registrations WHERE email = 'rechazar@test.local') = 1,
+    'rechazado hace menos de 30 dias: no se crea otra solicitud');
+  UPDATE public.ally_registrations SET reviewed_at = now() - interval '31 days' WHERE email = 'rechazar@test.local' AND status = 'rejected';
+  PERFORM harness.as_anon();
+  PERFORM public.submit_ally_registration('rechazar@test.local', 'Persona Rechazada', '5551112222', 'CDMX', true);
+  RESET ROLE;
+  PERFORM harness.must((SELECT count(*) FROM public.ally_registrations WHERE email = 'rechazar@test.local') = 2
+                       AND EXISTS (SELECT 1 FROM public.ally_registrations WHERE email = 'rechazar@test.local' AND status = 'pending'),
+    'pasado el enfriamiento se acepta una nueva solicitud');
+END $$;
+
+DO $$
+DECLARE
+  i int; v_hit boolean := false;
+BEGIN
+  PERFORM harness.as_anon();
+  FOR i IN 1..40 LOOP
+    BEGIN
+      PERFORM public.submit_ally_registration(format('hora%s@test.local', i), 'Solicitud Masiva', '5551234567', 'CDMX', true);
+    EXCEPTION WHEN program_limit_exceeded THEN
+      v_hit := true;
+      EXIT;
+    END;
+  END LOOP;
+  PERFORM harness.expect_error($q$SELECT public.submit_ally_registration('despues@test.local','Despues Del Limite','5551234567','CDMX',true)$q$, '54000');
+  RESET ROLE;
+  PERFORM harness.must(v_hit AND (SELECT count(*) FROM public.ally_registrations WHERE created_at > now() - interval '1 hour') = 10
+                       AND NOT EXISTS (SELECT 1 FROM public.ally_registrations WHERE email = 'despues@test.local'),
+    'limite por hora: exactamente 10 solicitudes nuevas y la siguiente se rechaza sin guardarse');
+END $$;
+
+DO $$
+DECLARE
+  i int; v_hit boolean := false;
+BEGIN
+  -- Se envejecen las solicitudes por tandas de 10 para que el tope por hora no oculte el tope por dia.
+  UPDATE public.ally_registrations SET created_at = now() - interval '2 hours';
+  PERFORM harness.as_anon();
+  FOR i IN 1..80 LOOP
+    BEGIN
+      PERFORM public.submit_ally_registration(format('dia%s@test.local', i), 'Solicitud Diaria', '5551234567', 'CDMX', true);
+    EXCEPTION WHEN program_limit_exceeded THEN
+      RESET ROLE;
+      IF (SELECT count(*) FROM public.ally_registrations WHERE created_at > now() - interval '24 hours') >= 30 THEN
+        v_hit := true;
+        EXIT;
+      END IF;
+      UPDATE public.ally_registrations SET created_at = now() - interval '2 hours' WHERE created_at > now() - interval '1 hour';
+      PERFORM harness.as_anon();
+    END;
+  END LOOP;
+  RESET ROLE;
+  PERFORM harness.must(v_hit AND (SELECT count(*) FROM public.ally_registrations WHERE created_at > now() - interval '24 hours') = 30,
+    'limite por dia: exactamente 30 solicitudes en 24 horas, aunque cada hora este por debajo de su tope');
+END $$;
+
+DO $$
+BEGIN
+  UPDATE public.ally_registrations SET created_at = now() - interval '3 days';
+  INSERT INTO public.ally_registrations (email, full_name, created_at)
+  SELECT format('pend%s@test.local', g), 'Pendiente Masivo', now() - interval '3 days'
+  FROM generate_series(1, 100 - (SELECT count(*) FROM public.ally_registrations WHERE status = 'pending')) AS g;
+  PERFORM harness.must((SELECT count(*) FROM public.ally_registrations WHERE status = 'pending') = 100, 'preparacion: 100 pendientes');
+  PERFORM harness.as_anon();
+  PERFORM harness.expect_error($q$SELECT public.submit_ally_registration('tope@test.local','Tope Pendientes','5551234567','CDMX',true)$q$, '54000');
+  RESET ROLE;
+  PERFORM harness.must(NOT EXISTS (SELECT 1 FROM public.ally_registrations WHERE email = 'tope@test.local'),
+    'limite de 100 pendientes: la solicitud 101 no se guarda');
+END $$;
+
+DO $$
+BEGIN
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM harness.must((SELECT confirmed_at IS NULL FROM public.admin_allies WHERE user_id = harness.id('ally2')),
+    'admin: aliado invitado sin confirmar muestra confirmed_at nulo');
+  RESET ROLE;
+  UPDATE auth.users SET email_confirmed_at = now() WHERE id = harness.id('ally2');
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM harness.must((SELECT confirmed_at IS NOT NULL FROM public.admin_allies WHERE user_id = harness.id('ally2')),
+    'admin: tras aceptar la invitacion confirmed_at tiene fecha');
+  RESET ROLE;
+  PERFORM harness.as_user(harness.id('ally1'));
+  PERFORM harness.must((SELECT count(*) FROM public.admin_allies) = 0, 'aliado: admin_allies sigue devolviendo 0 filas');
+  RESET ROLE;
+  PERFORM harness.as_anon();
+  PERFORM harness.expect_error('SELECT * FROM public.admin_allies', '42501');
+  RESET ROLE;
+  PERFORM harness.must((SELECT fp FROM harness.fingerprint) = harness.compute_fp(), 'huellas de 0001/plataforma intactas tras 0004');
 END $$;

@@ -68,3 +68,26 @@ test('token invalido: 401', async () => {
   const { clients } = makeClients({ lookup: { data: null, error: { code: 'PGRST301', message: 'jwt' } } });
   assert.equal((await approveRegistration(clients, 'reg')).status, 401);
 });
+
+test('la invitacion lleva la pagina de activacion como redirectTo y los datos del aliado', async () => {
+  const invites: unknown[] = [];
+  const { clients } = makeClients({ lookup: pending });
+  (clients.authAdmin.auth.admin as unknown as { inviteUserByEmail: unknown }).inviteUserByEmail = async (email: string, options: unknown) => {
+    invites.push({ email, options });
+    return { data: { user: { id: 'user-1' } }, error: null };
+  };
+  await approveRegistration(clients, 'reg', 'https://www.charlitrondigital.com/aliados/activar');
+  assert.deepEqual(invites, [
+    {
+      email: 'nueva@ejemplo.com',
+      options: { data: { full_name: 'Aliada Nueva' }, redirectTo: 'https://www.charlitrondigital.com/aliados/activar' },
+    },
+  ]);
+});
+
+test('el rechazo y la aprobacion no ocurren sin administrador: el id de otra solicitud no se invita', async () => {
+  const { clients, calls } = makeClients({ lookup: { data: null, error: { code: 'P0002', message: 'x' } } });
+  const result = await approveRegistration(clients, 'otra');
+  assert.equal(result.status, 404);
+  assert.deepEqual(calls, ['admin_registration_for_approval']);
+});

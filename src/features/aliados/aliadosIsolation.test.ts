@@ -61,3 +61,28 @@ test('el codigo del aliado no consulta tablas ni vistas de administrador', () =>
   assert.match(hook, /listMyReferrals/);
   assert.match(hook, /listMyCommissions/);
 });
+
+test('el registro publico solo usa las dos funciones publicas y nunca toca tablas', () => {
+  const allowed = new Set(['submit_ally_registration', 'aliados_registration_open']);
+  for (const name of ['aliadosRegistration.ts', 'AllyPublicPages.tsx', 'aliadosActivation.ts']) {
+    const text = sources.find((source) => source.name === name)?.text ?? '';
+    assert.ok(text.length > 0, `${name} existe`);
+    assert.equal(/\.from\(\s*['"`]/.test(text), false, `${name} consulta tablas directamente`);
+    for (const match of text.matchAll(/\.rpc\(\s*['"`]([a-z_]+)['"`]/g)) {
+      assert.ok(allowed.has(match[1] ?? ''), `${name} llama a la funcion no publica ${match[1]}`);
+    }
+  }
+});
+
+test('la activacion de cuenta solo usa setSession y updateUser con la contrasena; no crea cuentas ni cambia roles', () => {
+  const text = sources.find((source) => source.name === 'aliadosActivation.ts')?.text ?? '';
+  assert.match(text, /setSession/);
+  assert.match(text, /updateUser\(\{ password \}\)/);
+  assert.equal(/auth\.admin|inviteUserByEmail|user_metadata|raw_user_meta_data|account_roles/.test(text), false);
+});
+
+test('el acceso al panel de aliado sigue dependiendo del rol en la base, tambien tras activar la cuenta', () => {
+  const page = sources.find((source) => source.name === 'AllyPublicPages.tsx')?.text ?? '';
+  assert.match(page, /navigate\('\/aliados\/panel'/);
+  assert.equal(/AliadosAdminPanel|PartnerDashboard/.test(page), false, 'la pagina de activacion no renderiza paneles');
+});

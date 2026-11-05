@@ -29,6 +29,8 @@ export interface AllyProfile {
   status: 'pending' | 'active' | 'paused';
   approved_at?: string;
   created_at: string;
+  // null = invitacion sin aceptar; ausente = la base aun no expone la columna (migracion 0004).
+  confirmed_at?: string | null;
 }
 
 // Lo que ve el aliado (ally_my_referrals): sin notas internas ni datos de revision.
@@ -208,17 +210,26 @@ export class AliadosRepository {
 
   // La cuenta Auth se crea en el backend con la Auth Admin API; el navegador nunca ve la service role key.
   async approveRegistration(registrationId: string): Promise<void> {
+    await this.callBackend('/api/aliados-approve-registration', { registration_id: registrationId });
+  }
+
+  // Vuelve a enviar la invitacion a un aliado que aun no crea su contrasena (enlace vencido o perdido).
+  async resendInvitation(userId: string): Promise<void> {
+    await this.callBackend('/api/aliados-resend-invitation', { user_id: userId });
+  }
+
+  private async callBackend(path: string, body: Record<string, string>): Promise<void> {
     const { data } = await this.client.auth.getSession();
     const token = data.session?.access_token;
     if (!token) throw new Error('Sesión no válida. Vuelve a iniciar sesión.');
-    const response = await fetch('/api/aliados-approve-registration', {
+    const response = await fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ registration_id: registrationId }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
-      throw new Error(approvalErrorMessage(body.error));
+      const failure = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(approvalErrorMessage(failure.error));
     }
   }
 
@@ -309,6 +320,12 @@ function approvalErrorMessage(code?: string): string {
       return 'Sesión no válida. Vuelve a iniciar sesión.';
     case 'registration_not_found':
       return 'La solicitud ya no está pendiente.';
+    case 'ally_not_found':
+      return 'No se encontró al aliado.';
+    case 'already_active':
+      return 'Esa cuenta ya creó su contraseña; no necesita otra invitación.';
+    case 'auth_invite_failed':
+      return 'No se pudo enviar el correo de invitación. Revisa la configuración de correo de Supabase.';
     case 'email_already_registered':
       return 'Ese correo ya tiene una cuenta. Revísalo en Supabase Auth.';
     case 'auth_admin_not_configured':

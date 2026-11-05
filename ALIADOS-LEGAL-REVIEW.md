@@ -233,3 +233,10 @@ Cuando la revisión legal esté completa:
 **Responsable de esta documentación**: Copilot (Engineering)  
 **Responsable legal final**: [Requerido — nombre y firma del abogado/responsable legal]  
 **Fecha de validación final**: [REQUERIDA]
+
+---
+
+## 7. Textos publicados en /aliados/privacidad y /aliados/terminos
+
+Redactados a partir de este documento y del aviso general, sin inventar datos. Los datos que faltan están listados en `LEGAL_PENDING` (`src/features/aliados/aliadosLegal.ts`).
+El registro público tiene dos llaves: `aliados_settings.registration_open` (base de datos) y `ALIADOS_LEGAL_APPROVED` (código). Ambas deben abrirse; la segunda solo puede ser `true` con `LEGAL_PENDING` vacío (lo verifica una prueba). Esto sustituye al paso "REGISTRO_PUBLICO_HABILITADO" de la sección 6.

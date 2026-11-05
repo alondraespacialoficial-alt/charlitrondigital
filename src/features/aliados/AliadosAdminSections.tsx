@@ -295,6 +295,18 @@ export function AlliesSection({ data, repo, run, busy }: SectionProps) {
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <Badge status={ally.status} />
+                  {ally.confirmed_at === null && (
+                    <>
+                      <span className="rounded bg-yellow-900/50 px-2 py-1 text-xs font-semibold text-yellow-200">Invitación sin aceptar</span>
+                      <ConfirmAction
+                        label="Reenviar invitación"
+                        question={`¿Reenviar la invitación a ${ally.email}?`}
+                        confirmLabel="Sí, reenviar"
+                        busy={busy}
+                        onConfirm={() => run(() => repo.resendInvitation(ally.user_id), `Invitación reenviada a ${ally.email}.`)}
+                      />
+                    </>
+                  )}
                   {(() => {
                     const action = ALLY_STATUS_ACTIONS[ally.status];
                     if (!action) return null;

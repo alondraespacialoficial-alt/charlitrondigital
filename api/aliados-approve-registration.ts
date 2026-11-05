@@ -21,7 +21,20 @@ export interface ApprovalResult {
 
 const fail = (status: number, error: string): ApprovalResult => ({ status, body: { ok: false, error } });
 
-export async function approveRegistration(clients: ApprovalClients, registrationId: string): Promise<ApprovalResult> {
+// Pagina donde el aliado crea su contrasena. Debe estar en la lista de Redirect URLs de Supabase Auth.
+// En Preview apunta al despliegue; en Production, al sitio oficial. Sin base valida se omite (Supabase usa su Site URL).
+export function activationRedirect(env: Record<string, string | undefined>): string | undefined {
+  const base = env.VERCEL_ENV === 'preview' && env.VERCEL_URL ? `https://${env.VERCEL_URL}` : env.VITE_SITE_URL?.trim();
+  if (!base) return undefined;
+  try {
+    const url = new URL(base);
+    return url.protocol === 'https:' ? `${url.origin}/aliados/activar` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function approveRegistration(clients: ApprovalClients, registrationId: string, redirectTo?: string): Promise<ApprovalResult> {
   const lookup = await clients.asAdmin.rpc('admin_registration_for_approval', { p_registration_id: registrationId });
   if (lookup.error) {
     if (lookup.error.code === '42501') return fail(403, 'forbidden');
@@ -36,6 +49,7 @@ export async function approveRegistration(clients: ApprovalClients, registration
 
   const invited = await clients.authAdmin.auth.admin.inviteUserByEmail(registration.email, {
     data: { full_name: registration.full_name },
+    ...(redirectTo ? { redirectTo } : {}),
   });
   if (invited.error || !invited.data.user) {
     const code = invited.error && 'code' in invited.error ? String(invited.error.code) : '';
@@ -98,6 +112,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const asAdmin = createClient(url, anonKey, { ...options, global: { headers: { Authorization: `Bearer ${token}` } } });
   const authAdmin = createClient(url, serviceKey, options);
 
-  const result = await approveRegistration({ asAdmin, authAdmin }, registrationId);
+  const result = await approveRegistration({ asAdmin, authAdmin }, registrationId, activationRedirect(process.env));
   res.status(result.status).json(result.body);
 }

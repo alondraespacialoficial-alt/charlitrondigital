@@ -124,3 +124,34 @@ test('aprobar llama al backend con el JWT del administrador y traduce los errore
     globalThis.fetch = originalFetch;
   }
 });
+
+test('reenviar invitacion llama al backend con el JWT del administrador y traduce los errores', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: { url: string; init: RequestInit }[] = [];
+  let status = 200;
+  let body: unknown = { ok: true };
+  globalThis.fetch = (async (url: string, init: RequestInit) => {
+    requests.push({ url, init });
+    return new Response(JSON.stringify(body), { status });
+  }) as typeof fetch;
+  try {
+    const { repo } = mockClient({ token: 'jwt-admin' });
+    await repo.resendInvitation('user-1');
+    assert.equal(requests[0]?.url, '/api/aliados-resend-invitation');
+    assert.equal((requests[0]?.init.headers as Record<string, string>).Authorization, 'Bearer jwt-admin');
+    assert.equal(requests[0]?.init.body, JSON.stringify({ user_id: 'user-1' }));
+
+    status = 409;
+    body = { ok: false, error: 'already_active' };
+    await assert.rejects(() => repo.resendInvitation('user-1'), /ya creó su contraseña/);
+    status = 502;
+    body = { ok: false, error: 'auth_invite_failed' };
+    await assert.rejects(() => repo.resendInvitation('user-1'), /correo de invitación/);
+
+    const noSession = mockClient({ token: null });
+    await assert.rejects(() => noSession.repo.resendInvitation('user-1'), /Sesión no válida/);
+    assert.equal(requests.length, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
