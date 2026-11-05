@@ -30,7 +30,7 @@ export interface AdminPanelData {
 }
 
 // Ejecuta una accion contra la base, recarga los datos y muestra el resultado. Devuelve true si tuvo exito.
-export type Run = (action: () => Promise<unknown>, success: string) => Promise<boolean>;
+export type Run = (action: () => Promise<unknown>, success: string | ((result: unknown) => string)) => Promise<boolean>;
 
 interface SectionProps {
   data: AdminPanelData;
@@ -241,11 +241,64 @@ function MoneyForm({
 
 // ---------------------------------------------------------------- Aliados
 
+// Incorporacion directa con el registro publico cerrado: el backend verifica al administrador y no reenvia invitaciones a cuentas existentes.
+function InviteAllyForm({ repo, run, busy }: Pick<SectionProps, 'repo' | 'run' | 'busy'>) {
+  const [open, setOpen] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
+  if (!open) {
+    return <button type="button" className={primaryButton} onClick={() => setOpen(true)}>Invitar aliado</button>;
+  }
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const name = fullName.trim();
+    const address = email.trim().toLowerCase();
+    const ok = await run(
+      () => repo.inviteAlly({ email: address, full_name: name, phone: phone.trim() || undefined, city: city.trim() || undefined }),
+      (outcome) =>
+        outcome === 'linked'
+          ? `${name} ya tenía cuenta: quedó vinculado como aliado, sin enviar otra invitación.`
+          : `${name} fue incorporado como aliado. Se envió una invitación a ${address}.`,
+    );
+    if (ok) {
+      setOpen(false);
+      setFullName('');
+      setEmail('');
+      setPhone('');
+      setCity('');
+    }
+  };
+  return (
+    <form onSubmit={submit} aria-label="Invitar aliado" className={`${cardClass} grid gap-3 md:grid-cols-2`}>
+      <Field label="Nombre (obligatorio)">
+        <input required minLength={2} maxLength={120} value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputClass} />
+      </Field>
+      <Field label="Correo (obligatorio)">
+        <input required type="email" maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+      </Field>
+      <Field label="WhatsApp (opcional)">
+        <input type="tel" maxLength={30} value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
+      </Field>
+      <Field label="Ciudad (opcional)">
+        <input maxLength={80} value={city} onChange={(e) => setCity(e.target.value)} className={inputClass} />
+      </Field>
+      <div className="flex flex-wrap items-center gap-2 md:col-span-2">
+        <button type="submit" disabled={busy} className={primaryButton}>Incorporar aliado</button>
+        <button type="button" className={ghostButton} onClick={() => setOpen(false)}>Cancelar</button>
+        <p className="text-xs text-slate-400">Queda activo al instante. Si el correo ya tiene cuenta no se envía otra invitación.</p>
+      </div>
+    </form>
+  );
+}
+
 export function AlliesSection({ data, repo, run, busy }: SectionProps) {
   const pending = data.registrations.filter((reg) => reg.status === 'pending');
   const reviewed = data.registrations.filter((reg) => reg.status !== 'pending');
   return (
     <div className="space-y-6">
+      <InviteAllyForm repo={repo} run={run} busy={busy} />
       <Section title={`Solicitudes pendientes (${pending.length})`}>
         {pending.length === 0 ? (
           <Empty text="No hay solicitudes pendientes." />

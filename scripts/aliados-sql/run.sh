@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Valida las migraciones 0002, 0003 y 0004 en un PostgreSQL real y desechable (Docker). Solo pruebas locales.
+# Valida las migraciones 0002 a 0005 en un PostgreSQL real y desechable (Docker). Solo pruebas locales.
 # Resultado = codigos de salida de psql. Cualquier fallo detiene el script con exit != 0.
 set -euo pipefail
 
@@ -60,6 +60,16 @@ if psql_c -f - < "$PROPOSALS/aliados-lab-0004-registration.sql" >/dev/null 2>&1;
   exit 1
 fi
 echo "ok  la segunda instalacion de 0004 fue rechazada (exit != 0)"
+
+step "Instalacion de 0005 (invitacion directa por administrador) sobre 0001-0004"
+psql_c -f - < "$PROPOSALS/aliados-lab-0005-admin-invite.sql"
+
+step "Reinstalar 0005 debe FALLAR (guarda de idempotencia)"
+if psql_c -f - < "$PROPOSALS/aliados-lab-0005-admin-invite.sql" >/dev/null 2>&1; then
+  echo "ERROR: la segunda instalacion de 0005 no fallo" >&2
+  exit 1
+fi
+echo "ok  la segunda instalacion de 0005 fue rechazada (exit != 0)"
 
 step "Pruebas funcionales y de acceso indebido"
 psql_c -f - < "$HERE/tests.sql"

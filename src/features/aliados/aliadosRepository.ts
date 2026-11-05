@@ -218,7 +218,13 @@ export class AliadosRepository {
     await this.callBackend('/api/aliados-resend-invitation', { user_id: userId });
   }
 
-  private async callBackend(path: string, body: Record<string, string>): Promise<void> {
+  // Incorpora a un aliado con el registro publico cerrado. 'linked' = ya tenia cuenta: se vincula sin otra invitacion.
+  async inviteAlly(input: { email: string; full_name: string; phone?: string; city?: string }): Promise<'invited' | 'linked'> {
+    const result = await this.callBackend('/api/aliados-invite-ally', input);
+    return result.outcome === 'linked' ? 'linked' : 'invited';
+  }
+
+  private async callBackend(path: string, body: Record<string, string | undefined>): Promise<{ outcome?: string }> {
     const { data } = await this.client.auth.getSession();
     const token = data.session?.access_token;
     if (!token) throw new Error('Sesión no válida. Vuelve a iniciar sesión.');
@@ -231,6 +237,7 @@ export class AliadosRepository {
       const failure = (await response.json().catch(() => ({}))) as { error?: string };
       throw new Error(approvalErrorMessage(failure.error));
     }
+    return (await response.json().catch(() => ({}))) as { outcome?: string };
   }
 
   // Aprobar (pending -> active), pausar (active -> paused) o reactivar (paused -> active). Solo por funcion segura.
@@ -328,6 +335,10 @@ function approvalErrorMessage(code?: string): string {
       return 'No se pudo enviar el correo de invitación. Revisa la configuración de correo de Supabase.';
     case 'email_already_registered':
       return 'Ese correo ya tiene una cuenta. Revísalo en Supabase Auth.';
+    case 'already_ally':
+      return 'Ese correo ya pertenece a un aliado o administrador.';
+    case 'invalid_data':
+      return 'Revisa los datos: nombre, correo y, si lo escribes, un WhatsApp válido.';
     case 'auth_admin_not_configured':
       return 'El servidor aún no tiene configurada la clave de administración de Auth.';
     default:

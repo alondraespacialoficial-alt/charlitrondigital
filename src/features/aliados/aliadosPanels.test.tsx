@@ -42,6 +42,12 @@ test('Aliados: solicitud pendiente con aprobar/rechazar y aliados con su estado'
   assert.match(html, /Activo/);
 });
 
+test('Aliados: el panel ofrece "Invitar aliado" y el formulario solo aparece al pulsarlo', () => {
+  const html = renderToStaticMarkup(createElement(AlliesSection, props));
+  assert.match(html, />Invitar aliado</);
+  assert.equal(/Incorporar aliado/.test(html), false);
+});
+
 test('Aliados: Aprobar a pendientes, Pausar a activos y Reactivar a pausados', () => {
   const allies = [
     { user_id: 'p', display_name: 'Aliado Pendiente', email: 'p@x.co', status: 'pending' as const, created_at: '2026-10-01' },

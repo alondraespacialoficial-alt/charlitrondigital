@@ -81,15 +81,16 @@ export function AliadosAdminPanel({ onSignOut }: { onSignOut: () => void }) {
     setBusy(true);
     setError('');
     setNotice('');
+    let result: unknown;
     try {
-      await action();
+      result = await action();
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
       return false;
     }
     const refreshed = await load();
-    if (refreshed) setNotice(success);
+    if (refreshed) setNotice(typeof success === 'function' ? success(result) : success);
     setBusy(false);
     return true;
   };
