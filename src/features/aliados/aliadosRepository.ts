@@ -12,7 +12,8 @@ export interface AllyRegistration {
   phone?: string;
   full_name: string;
   city?: string;
-  consent_at: string;
+  // null = invitacion creada por un administrador: el interesado aun no acepta el aviso.
+  consent_at: string | null;
   created_at: string;
   reviewed_at?: string;
   rejection_reason?: string;

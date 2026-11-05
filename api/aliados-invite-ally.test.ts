@@ -50,9 +50,9 @@ test('correo nuevo: crea la solicitud, invita con la pagina de activacion y lueg
 
 test('cuenta ya existente: se vincula sin enviar otra invitacion ni duplicar el usuario', async () => {
   const { clients, calls } = makeClients({ created: { data: [{ registration_id: REG, auth_user_id: USER }], error: null } });
-  const result = await inviteAlly(clients, INPUT);
+  const result = await inviteAlly(clients, { email: 'merkatingadmon@hotmail.com', full_name: 'Merkating Admon' });
   assert.deepEqual(result, { status: 200, body: { ok: true, outcome: 'linked' } });
-  assert.equal(calls.some((call) => call.startsWith('invite')), false);
+  assert.equal(calls.some((call) => call.startsWith('invite') || call.startsWith('delete')), false);
   assert.equal(calls[1], `rpc:admin_finalize_registration:${JSON.stringify({ p_registration_id: REG, p_user_id: USER })}`);
 });
 

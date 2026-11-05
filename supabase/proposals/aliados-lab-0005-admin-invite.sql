@@ -5,6 +5,9 @@
 -- Efecto: agrega admin_invite_ally, que deja una solicitud pendiente a nombre del administrador (auditada con su
 -- identidad y el motivo) y avisa si el correo ya existe en Auth. El rol y el perfil NO se crean aqui: los crea
 -- admin_finalize_registration (0002) cuando el backend la llama con el JWT del administrador.
+-- Consentimiento: una invitacion de administrador NO registra aceptacion alguna. Para ello agrega ally_registrations.origin
+-- ('public' por defecto, asi que las filas existentes no cambian) y permite consent_at NULL solo cuando origin = 'admin_invite'.
+-- consent_at sigue siendo la aceptacion real del interesado en el registro publico.
 -- Esta migracion NO abre el registro publico: registration_open no se toca.
 
 BEGIN;
@@ -25,6 +28,11 @@ BEGIN
   END IF;
 END
 $guard$;
+
+ALTER TABLE public.ally_registrations
+  ADD COLUMN origin text NOT NULL DEFAULT 'public' CHECK (origin IN ('public', 'admin_invite')),
+  ALTER COLUMN consent_at DROP NOT NULL,
+  ADD CONSTRAINT ally_registrations_consent_matches_origin CHECK ((origin = 'admin_invite') = (consent_at IS NULL));
 
 CREATE FUNCTION public.admin_invite_ally(p_email text, p_full_name text, p_phone text, p_city text)
 RETURNS TABLE (registration_id uuid, auth_user_id uuid)
@@ -52,8 +60,8 @@ BEGIN
   SELECT r.id INTO v_reg FROM public.ally_registrations r WHERE r.email = v_email AND r.status = 'pending';
   IF v_reg IS NULL THEN
     PERFORM set_config('aliados.reason', 'invitacion directa de administrador', true);
-    INSERT INTO public.ally_registrations (email, full_name, phone, city)
-    VALUES (v_email, btrim(COALESCE(p_full_name, '')), v_phone, NULLIF(btrim(COALESCE(p_city, '')), ''))
+    INSERT INTO public.ally_registrations (email, full_name, phone, city, origin, consent_at)
+    VALUES (v_email, btrim(COALESCE(p_full_name, '')), v_phone, NULLIF(btrim(COALESCE(p_city, '')), ''), 'admin_invite', NULL)
     RETURNING id INTO v_reg;
     PERFORM set_config('aliados.reason', '', true);
   END IF;
@@ -82,6 +90,10 @@ WITH checks (orden, verificacion, ok) AS (
   UNION ALL
   SELECT 3, 'el registro publico sigue cerrado (registration_open = false)',
          EXISTS (SELECT 1 FROM public.aliados_settings WHERE registration_open = false)
+  UNION ALL
+  SELECT 4, 'consent_at admite NULL solo con origin = admin_invite (restriccion validada)',
+         EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.ally_registrations'::regclass
+                 AND conname = 'ally_registrations_consent_matches_origin' AND convalidated)
 )
 SELECT orden, CASE WHEN ok THEN 'PASA' ELSE 'FALLA' END AS resultado, verificacion FROM checks
 UNION ALL
