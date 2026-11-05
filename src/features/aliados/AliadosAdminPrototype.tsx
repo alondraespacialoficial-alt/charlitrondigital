@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Check, Lock, ShieldCheck, UsersRound, WalletCards, Handshake } from 'lucide-react';
 import { CharlitronLogo } from '../../components/CharlitronLogo';
 
@@ -135,7 +134,7 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export default function AliadosAdminPrototype() {
+export default function AliadosAdminPrototype({ onSignOut }: { onSignOut: () => void }) {
   const [tab, setTab] = useState<AdminTab>('referidos');
   const [allies, setAllies] = useState(INITIAL_ALLIES);
   const [referrals, setReferrals] = useState(INITIAL_REFERRALS);
@@ -180,14 +179,14 @@ export default function AliadosAdminPrototype() {
             <CharlitronLogo size="sm" showTagline={false} />
             <span className="rounded-full border border-amber-200/20 bg-amber-200/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-100">Panel administrador</span>
           </div>
-          <Link to="/aliados" className="inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
-            <ArrowLeft className="h-4 w-4" /> Salir
-          </Link>
+          <button type="button" onClick={onSignOut} className="inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
+            <ArrowLeft className="h-4 w-4" /> Cerrar sesión
+          </button>
         </div>
       </header>
 
       <div role="note" className="border-b border-amber-200/15 bg-amber-200/[0.05] px-5 py-3 text-center text-xs leading-5 text-amber-100 sm:px-8">
-        <strong>Demostración · datos ficticios · sin control de acceso real.</strong> Esta pantalla no tiene inicio de sesión ni protege información. Los cambios no se guardan ni modifican datos reales; al recargar todo se restablece.
+        <strong>Sesión de administrador verificada · datos ficticios.</strong> Los datos de esta pantalla no son reales: los cambios no se guardan ni modifican información; al recargar todo se restablece.
       </div>
 
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">

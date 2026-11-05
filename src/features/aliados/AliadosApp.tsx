@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense, type FormEvent } from 'react';
+import { useEffect, useState, lazy, Suspense, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowDownRight,
@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { CharlitronLogo } from '../../components/CharlitronLogo';
 import { applyPageMeta } from '../../lib/seo';
+import { destinationFor } from './aliadosRole';
+import { useAliadosSession, type AliadosSession } from './useAliadosSession';
 
 type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
 
@@ -141,37 +143,83 @@ const publicSteps = [
 export function AliadosApp() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [demoSignedIn, setDemoSignedIn] = useState(false);
+  const session = useAliadosSession();
   const path = location.pathname.replace(/\/$/, '') || '/aliados';
   useAliadosMeta(path);
 
+  const handleSignOut = async () => {
+    await session.signOut();
+    navigate('/aliados');
+  };
+
   if (path === '/aliados') return <AlliesLanding />;
   if (path === '/aliados/terminos') return <AllyTermsPage />;
-  if (path === '/aliados/admin') {
-    return (
-      <Suspense fallback={<div className="min-h-screen bg-[#09090b]" />}>
-        <AliadosAdminPrototype />
-      </Suspense>
-    );
-  }
-  if (path === '/aliados/ingresar') return <PartnerLogin onLogin={() => {
-    setDemoSignedIn(true);
-    navigate('/aliados/panel');
-  }} />;
-  if (path === '/aliados/panel') {
-    return demoSignedIn ? (
-      <PartnerDashboard onLogout={() => {
-        setDemoSignedIn(false);
-        navigate('/aliados');
-      }} />
-    ) : (
-      <PartnerLogin onLogin={() => {
-        setDemoSignedIn(true);
-        navigate('/aliados/panel');
-      }} />
-    );
-  }
+  if (path === '/aliados/ingresar') return <PartnerLogin session={session} />;
+  if (path === '/aliados/admin') return <AdminGate session={session} onSignOut={handleSignOut} />;
+  if (path === '/aliados/panel') return <PanelGate session={session} onSignOut={handleSignOut} />;
   return <Navigate to="/aliados" replace />;
+}
+
+function StatusScreen({ title, text, onSignOut, children }: { title: string; text?: string; onSignOut?: () => void; children?: ReactNode }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-4 py-10 text-zinc-100">
+      <section role="status" className="w-full max-w-md rounded-lg border border-white/10 bg-[#111114] p-6 shadow-2xl sm:p-8">
+        <CharlitronLogo size="sm" showTagline={false} />
+        <h1 className="mt-7 font-display text-2xl font-semibold text-white">{title}</h1>
+        {text && <p className="mt-3 text-sm leading-6 text-zinc-400">{text}</p>}
+        {children}
+        <div className="mt-7 flex flex-wrap items-center gap-4 border-t border-white/10 pt-5">
+          <Link to="/aliados" className="text-sm text-zinc-400 transition hover:text-white">Volver a Aliados</Link>
+          {onSignOut && (
+            <button type="button" onClick={onSignOut} className="inline-flex items-center gap-2 text-sm text-amber-200 transition hover:text-amber-100">
+              <LogOut className="h-4 w-4" /> Cerrar sesión
+            </button>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function AdminGate({ session, onSignOut }: { session: AliadosSession; onSignOut: () => void }) {
+  const { state } = session;
+  if (state.status === 'loading') return <StatusScreen title="Verificando acceso…" />;
+  if (state.status === 'unconfigured' || state.status === 'anonymous') return <Navigate to="/aliados/ingresar" replace />;
+  if (state.status === 'error') return <StatusScreen title="No pudimos verificar tu acceso" text={state.message} onSignOut={onSignOut} />;
+  if (destinationFor(state.role) !== 'admin') {
+    return <StatusScreen title="Acceso restringido" text="Esta sección es solo para administradores de Charlitron." onSignOut={onSignOut} />;
+  }
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#09090b]" />}>
+      <AliadosAdminPrototype onSignOut={onSignOut} />
+    </Suspense>
+  );
+}
+
+function PanelGate({ session, onSignOut }: { session: AliadosSession; onSignOut: () => void }) {
+  const { state } = session;
+  if (state.status === 'loading') return <StatusScreen title="Verificando acceso…" />;
+  if (state.status === 'unconfigured' || state.status === 'anonymous') return <Navigate to="/aliados/ingresar" replace />;
+  if (state.status === 'error') return <StatusScreen title="No pudimos verificar tu acceso" text={state.message} onSignOut={onSignOut} />;
+
+  const destination = destinationFor(state.role);
+  if (destination === 'panel' && state.role.kind === 'ally') {
+    return <PartnerDashboard displayName={state.role.displayName} onLogout={onSignOut} />;
+  }
+  if (destination === 'pending') {
+    return <StatusScreen title="Tu cuenta está pendiente de aprobación" text="Charlitron revisará tu solicitud. Cuando esté aprobada podrás entrar a tu panel." onSignOut={onSignOut} />;
+  }
+  if (destination === 'paused') {
+    return <StatusScreen title="Tu cuenta está en pausa" text="Por ahora no puedes acceder al panel. Escríbenos si tienes dudas." onSignOut={onSignOut} />;
+  }
+  if (destination === 'admin') {
+    return (
+      <StatusScreen title="Cuenta de administrador" text="Esta cuenta no es de aliado." onSignOut={onSignOut}>
+        <Link to="/aliados/admin" className="mt-4 inline-block text-sm text-amber-200 underline underline-offset-2">Ir al panel administrador</Link>
+      </StatusScreen>
+    );
+  }
+  return <StatusScreen title="Tu cuenta no tiene acceso al programa" text="Si crees que es un error, contacta a Charlitron." onSignOut={onSignOut} />;
 }
 
 function AlliesLanding() {
@@ -405,13 +453,38 @@ function AllyTermsPage() {
   );
 }
 
-function PartnerLogin({ onLogin }: { onLogin: () => void }) {
+function PartnerLogin({ session }: { session: AliadosSession }) {
+  const { state, signIn, signOut } = session;
   const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (state.status === 'error') {
+      setBusy(false);
+      setMessage(state.message);
+    }
+  }, [state]);
+
+  if (state.status === 'ready') {
+    const destination = destinationFor(state.role);
+    if (destination === 'admin') return <Navigate to="/aliados/admin" replace />;
+    if (destination !== 'denied') return <Navigate to="/aliados/panel" replace />;
+    return <StatusScreen title="Tu cuenta no tiene acceso al programa" text="Si crees que es un error, contacta a Charlitron." onSignOut={() => void signOut()} />;
+  }
+
+  const unconfigured = state.status === 'unconfigured';
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setMessage('Acceso de demostración activado. No se validan ni almacenan credenciales.');
-    onLogin();
+    if (busy || unconfigured) return;
+    const form = new FormData(event.currentTarget);
+    setBusy(true);
+    setMessage('');
+    const error = await signIn(String(form.get('email') ?? ''), String(form.get('password') ?? ''));
+    if (error) {
+      setBusy(false);
+      setMessage(error);
+    }
   };
 
   return (
@@ -427,27 +500,33 @@ function PartnerLogin({ onLogin }: { onLogin: () => void }) {
           <h1 className="mt-2 font-display text-3xl font-semibold text-white">Qué gusto verte.</h1>
           <p className="mt-2 text-sm leading-6 text-zinc-400">Ingresa para consultar tus recomendaciones y acuerdos.</p>
         </div>
+        {unconfigured && (
+          <p role="alert" className="mb-4 rounded-md border border-amber-200/20 bg-amber-200/[0.06] p-3 text-xs leading-5 text-amber-100">
+            El acceso no está configurado en esta vista previa.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm text-zinc-300">
             Correo
-            <input required type="email" autoComplete="email" className="mt-2 min-h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-white outline-none transition focus:border-amber-200/60" placeholder="tu@correo.com" />
+            <input required name="email" type="email" autoComplete="email" disabled={unconfigured || busy} className="mt-2 min-h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-white outline-none transition focus:border-amber-200/60 disabled:opacity-50" placeholder="tu@correo.com" />
           </label>
           <label className="block text-sm text-zinc-300">
             Contraseña
-            <input required type="password" autoComplete="current-password" className="mt-2 min-h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-white outline-none transition focus:border-amber-200/60" placeholder="••••••••" />
+            <input required name="password" type="password" autoComplete="current-password" disabled={unconfigured || busy} className="mt-2 min-h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-white outline-none transition focus:border-amber-200/60 disabled:opacity-50" placeholder="••••••••" />
           </label>
-          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200">
-            Entrar al prototipo <ArrowRight className="h-4 w-4" />
+          <button type="submit" disabled={unconfigured || busy} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60">
+            {busy ? 'Verificando…' : 'Entrar'} <ArrowRight className="h-4 w-4" />
           </button>
-          {message && <p role="status" className="text-xs leading-5 text-emerald-200">{message}</p>}
+          {message && <p role="alert" className="text-xs leading-5 text-red-300">{message}</p>}
         </form>
-        <p className="mt-6 border-t border-white/10 pt-5 text-xs leading-5 text-zinc-600">Prototipo visual con datos ficticios. El acceso real se integrará en una fase posterior.</p>
+        <p className="mt-6 border-t border-white/10 pt-5 text-xs leading-5 text-zinc-600">El acceso es solo para cuentas autorizadas por Charlitron; el registro público no está disponible. Los datos del panel siguen siendo ficticios.</p>
       </section>
     </main>
   );
 }
 
-function PartnerDashboard({ onLogout }: { onLogout: () => void }) {
+function PartnerDashboard({ displayName, onLogout }: { displayName: string; onLogout: () => void }) {
+  const firstName = displayName.trim().split(' ')[0] ?? '';
   const [activeTab, setActiveTab] = useState<PanelTab>('resumen');
   const [referralOpen, setReferralOpen] = useState(false);
   const tabs: { id: PanelTab; label: string; icon: typeof UsersRound }[] = [
@@ -462,8 +541,8 @@ function PartnerDashboard({ onLogout }: { onLogout: () => void }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
           <Link to="/aliados" aria-label="Aliados Charlitron" className="rounded-sm"><CharlitronLogo size="sm" showTagline={false} /></Link>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-zinc-400 sm:inline">Mariana Torres</span>
-            <button type="button" onClick={onLogout} aria-label="Cerrar sesión de demostración" title="Salir" className="grid h-10 w-10 place-items-center rounded-md border border-white/10 text-zinc-400 transition hover:border-white/20 hover:text-white">
+            <span className="hidden text-sm text-zinc-400 sm:inline">{displayName}</span>
+            <button type="button" onClick={onLogout} aria-label="Cerrar sesión" title="Salir" className="grid h-10 w-10 place-items-center rounded-md border border-white/10 text-zinc-400 transition hover:border-white/20 hover:text-white">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -489,7 +568,7 @@ function PartnerDashboard({ onLogout }: { onLogout: () => void }) {
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-200">Tu espacio</p>
-              <h1 className="mt-2 font-display text-3xl font-semibold text-white">{activeTab === 'resumen' ? 'Hola, Mariana.' : activeTab === 'recomendaciones' ? 'Tus recomendaciones.' : 'Tus comisiones.'}</h1>
+              <h1 className="mt-2 font-display text-3xl font-semibold text-white">{activeTab === 'resumen' ? `Hola${firstName ? `, ${firstName}` : ''}.` : activeTab === 'recomendaciones' ? 'Tus recomendaciones.' : 'Tus comisiones.'}</h1>
               <p className="mt-2 text-sm text-zinc-500">{activeTab === 'resumen' ? 'Aquí puedes dar seguimiento a tus oportunidades.' : activeTab === 'recomendaciones' ? 'El avance de los negocios que acercaste a Charlitron.' : 'Acuerdos registrados y su estado de liberación.'}</p>
             </div>
             <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/15 bg-amber-200/[0.05] px-3 py-1.5 text-[11px] font-medium text-amber-100/80">
