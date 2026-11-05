@@ -347,7 +347,7 @@ END $$;
 DO $$
 DECLARE
   v_expected text[] := ARRAY['admin_assign_commission', 'admin_authorize_commission', 'admin_correct_sale',
-    'admin_finalize_registration', 'admin_pay_commission', 'admin_record_payment', 'admin_record_sale',
+    'admin_finalize_registration', 'admin_invite_ally', 'admin_pay_commission', 'admin_record_payment', 'admin_record_sale',
     'admin_registration_for_approval', 'admin_reject_registration', 'admin_reverse_commission_payment',
     'admin_reverse_payment', 'admin_set_ally_status', 'admin_set_referral_status', 'aliados_registration_open',
     'submit_ally_registration', 'submit_referral'];
@@ -356,7 +356,7 @@ BEGIN
                         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                         WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)'
                           AND has_function_privilege('authenticated', p.oid, 'EXECUTE')) = v_expected,
-    'authenticated ejecuta exactamente las 16 funciones publicas; ningun ayudante interno');
+    'authenticated ejecuta exactamente las 17 funciones publicas; ningun ayudante interno');
   PERFORM harness.must((SELECT array_agg(p.proname::text ORDER BY p.proname::text COLLATE "C") FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                         WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)'
                           AND has_function_privilege('anon', p.oid, 'EXECUTE')) = ARRAY['aliados_registration_open', 'submit_ally_registration'],
@@ -635,4 +635,69 @@ BEGIN
   PERFORM harness.expect_error('SELECT * FROM public.admin_allies', '42501');
   RESET ROLE;
   PERFORM harness.must((SELECT fp FROM harness.fingerprint) = harness.compute_fp(), 'huellas de 0001/plataforma intactas tras 0004');
+END $$;
+
+-- 13. 0005: invitacion directa por administrador (solicitud auditada; rol y perfil solo tras finalize).
+DO $$
+DECLARE
+  v_open boolean := (SELECT registration_open FROM public.aliados_settings);
+  v_roles int := (SELECT count(*) FROM public.account_roles);
+  v_ally_email text := (SELECT email FROM auth.users WHERE id = harness.id('ally1'));
+  v_reg uuid; v_again uuid; v_user uuid; v_found uuid;
+BEGIN
+  PERFORM harness.as_anon();
+  PERFORM harness.expect_error($q$SELECT * FROM public.admin_invite_ally('x@test.local','Persona X',NULL,NULL)$q$, '42501');
+  RESET ROLE;
+  PERFORM harness.as_user(harness.id('ally1'));
+  PERFORM harness.expect_error($q$SELECT * FROM public.admin_invite_ally('x@test.local','Persona X',NULL,NULL)$q$, '42501');
+  RESET ROLE;
+
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM harness.expect_error($q$SELECT * FROM public.admin_invite_ally('tel@test.local','Telefono Malo','123',NULL)$q$, '23514');
+  PERFORM harness.expect_error($q$SELECT * FROM public.admin_invite_ally('no-es-correo','Correo Malo',NULL,NULL)$q$, '23514');
+  PERFORM harness.expect_error($q$SELECT * FROM public.admin_invite_ally('corto@test.local','A',NULL,NULL)$q$, '23514');
+  PERFORM harness.expect_error(format($q$SELECT * FROM public.admin_invite_ally(%L,'Ya Aliado',NULL,NULL)$q$, v_ally_email), '23505');
+
+  -- Correo nuevo: queda una solicitud pendiente y sin cuenta Auth; nada de rol ni perfil.
+  SELECT i.registration_id, i.auth_user_id INTO v_reg, v_user FROM public.admin_invite_ally(' Directo@Test.Local ', 'Aliado Directo', '+52 444 123 4567', 'SLP') i;
+  SELECT i.registration_id INTO v_again FROM public.admin_invite_ally('directo@test.local', 'Otro Nombre', NULL, NULL) i;
+  RESET ROLE;
+  PERFORM harness.must(v_reg IS NOT NULL AND v_user IS NULL AND v_again = v_reg
+                       AND (SELECT count(*) FROM public.ally_registrations WHERE email = 'directo@test.local') = 1
+                       AND EXISTS (SELECT 1 FROM public.ally_registrations WHERE id = v_reg AND status = 'pending' AND full_name = 'Aliado Directo'
+                                   AND origin = 'admin_invite' AND consent_at IS NULL),
+    'invitar un correo nuevo crea una sola solicitud pendiente sin consentimiento ficticio (repetir no duplica)');
+  PERFORM harness.must((SELECT count(*) FROM public.account_roles) = v_roles AND NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'directo@test.local'),
+    'invitar no crea cuenta, rol ni perfil');
+  PERFORM harness.must(EXISTS (SELECT 1 FROM public.aliados_audit_log WHERE table_name = 'ally_registrations' AND op = 'INSERT' AND row_id = v_reg::text
+                               AND actor = harness.id('admin') AND reason = 'invitacion directa de administrador'),
+    'la invitacion directa queda auditada con el administrador y el motivo');
+
+  -- Cuenta Auth confirmada sin rol (caso merkatingadmon): se vincula solo con la autorizacion del administrador.
+  INSERT INTO auth.users (email, email_confirmed_at) VALUES ('merkatingadmon@hotmail.com', now()) RETURNING id INTO v_user;
+  PERFORM harness.as_user(harness.id('admin'));
+  SELECT i.registration_id, i.auth_user_id INTO v_reg, v_found FROM public.admin_invite_ally('Merkatingadmon@Hotmail.com', 'Aliado Existente', NULL, NULL) i;
+  RESET ROLE;
+  PERFORM harness.must(v_found = v_user AND NOT EXISTS (SELECT 1 FROM public.account_roles WHERE user_id = v_user),
+    'cuenta existente: se detecta y aun no recibe rol ni perfil');
+  PERFORM harness.as_user(harness.id('ally1'));
+  PERFORM harness.expect_error(format('SELECT public.admin_finalize_registration(%L, %L)', v_reg, v_user), '42501');
+  RESET ROLE;
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM public.admin_finalize_registration(v_reg, v_user);
+  PERFORM harness.expect_error(format($q$SELECT * FROM public.admin_invite_ally('merkatingadmon@hotmail.com','Aliado Existente',NULL,NULL)$q$), '23505');
+  RESET ROLE;
+  PERFORM harness.must(EXISTS (SELECT 1 FROM public.ally_profiles WHERE user_id = v_user AND status = 'active' AND approved_by = harness.id('admin'))
+                       AND (SELECT count(*) FROM auth.users WHERE lower(email) = 'merkatingadmon@hotmail.com') = 1,
+    'tras finalize el aliado queda activo, aprobado por el administrador y sin usuarios duplicados');
+  -- Sin aceptacion ficticia: solo el registro publico fija consent_at, y la base impide mezclar ambos origenes.
+  PERFORM harness.must(NOT EXISTS (SELECT 1 FROM public.ally_registrations WHERE (origin = 'admin_invite') <> (consent_at IS NULL))
+                       AND NOT EXISTS (SELECT 1 FROM public.ally_registrations WHERE origin = 'public' AND consent_at IS NULL)
+                       AND (SELECT count(*) FROM public.ally_registrations WHERE origin = 'admin_invite') = 2,
+    'solo las invitaciones de administrador tienen consent_at nulo; las solicitudes publicas conservan su consentimiento');
+  PERFORM harness.expect_error(format($q$UPDATE public.ally_registrations SET consent_at = now() WHERE id = %L$q$, v_reg), '23514');
+  PERFORM harness.expect_error($q$INSERT INTO public.ally_registrations (email, full_name, origin) VALUES ('mezcla@test.local', 'Mezcla Origen', 'admin_invite')$q$, '23514');
+  PERFORM harness.expect_error($q$INSERT INTO public.ally_registrations (email, full_name, consent_at) VALUES ('sinorigen@test.local', 'Sin Consentimiento', NULL)$q$, '23514');
+  PERFORM harness.must((SELECT registration_open FROM public.aliados_settings) = v_open, '0005 no cambia registration_open');
+  PERFORM harness.must((SELECT fp FROM harness.fingerprint) = harness.compute_fp(), 'huellas de 0001/plataforma intactas tras 0005');
 END $$;

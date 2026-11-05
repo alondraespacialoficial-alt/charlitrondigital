@@ -125,6 +125,38 @@ test('aprobar llama al backend con el JWT del administrador y traduce los errore
   }
 });
 
+test('invitar aliado llama al backend con el JWT del administrador, devuelve el resultado y traduce los errores', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: { url: string; init: RequestInit }[] = [];
+  let status = 200;
+  let body: unknown = { ok: true, outcome: 'invited' };
+  globalThis.fetch = (async (url: string, init: RequestInit) => {
+    requests.push({ url, init });
+    return new Response(JSON.stringify(body), { status });
+  }) as typeof fetch;
+  try {
+    const { repo } = mockClient({ token: 'jwt-admin' });
+    assert.equal(await repo.inviteAlly({ email: 'a@b.co', full_name: 'Ana Perez', city: 'SLP' }), 'invited');
+    assert.equal(requests[0]?.url, '/api/aliados-invite-ally');
+    assert.equal((requests[0]?.init.headers as Record<string, string>).Authorization, 'Bearer jwt-admin');
+    assert.equal(requests[0]?.init.body, JSON.stringify({ email: 'a@b.co', full_name: 'Ana Perez', city: 'SLP' }));
+
+    body = { ok: true, outcome: 'linked' };
+    assert.equal(await repo.inviteAlly({ email: 'a@b.co', full_name: 'Ana Perez' }), 'linked');
+    status = 409;
+    body = { ok: false, error: 'already_ally' };
+    await assert.rejects(() => repo.inviteAlly({ email: 'a@b.co', full_name: 'Ana Perez' }), /ya pertenece a un aliado/);
+    status = 403;
+    body = { ok: false, error: 'forbidden' };
+    await assert.rejects(() => repo.inviteAlly({ email: 'a@b.co', full_name: 'Ana Perez' }), /administrador/);
+
+    const noSession = mockClient({ token: null });
+    await assert.rejects(() => noSession.repo.inviteAlly({ email: 'a@b.co', full_name: 'Ana Perez' }), /Sesión no válida/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('reenviar invitacion llama al backend con el JWT del administrador y traduce los errores', async () => {
   const originalFetch = globalThis.fetch;
   const requests: { url: string; init: RequestInit }[] = [];
