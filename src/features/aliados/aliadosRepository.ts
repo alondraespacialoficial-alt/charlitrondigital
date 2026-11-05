@@ -321,7 +321,7 @@ export class AliadosRepository {
     return data as Commission;
   }
 
-  async listCommissionPayments(commissionId: string) {
+  async listCommissionPaymentsByCommission(commissionId: string) {
     const { data, error } = await this.client
       .from('commission_payments')
       .select('*')

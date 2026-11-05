@@ -35,7 +35,7 @@ async function runTests() {
   console.log('\n🧪 ALIADOS CHARLITRON — PRUEBA E2E COMPLETA\n');
   console.log(`URL: ${ALIADOS_URL}\n`);
 
-  const client = createClient(ALIADOS_URL, ALIADOS_KEY);
+  const client = createClient(ALIADOS_URL!, ALIADOS_KEY!);
 
   try {
     // ========================================

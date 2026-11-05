@@ -1,16 +1,10 @@
 /**
- * Ally Registration Page — Conectado a Supabase
- * Formulario público para solicitar registro.
- * Guardar solicitud en ally_registrations (sin crear usuario aún).
+ * Ally Registration Form — Conectado a Supabase
+ * Registro público simplificado (sin librerías UI externas)
  */
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, Mail, Phone, MapPin, User } from 'lucide-react';
+import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { Mail, Phone, MapPin, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { aliadosSupabase } from './aliadosSupabase';
 
 interface RegistrationForm {
@@ -29,7 +23,7 @@ interface RegistrationState {
   formErrors: { [key in keyof RegistrationForm]?: string };
 }
 
-export function AllyRegistrationPage() {
+export function AllyRegistrationForm() {
   const [state, setState] = useState<RegistrationState>({
     form: {
       email: '',
@@ -63,7 +57,7 @@ export function AllyRegistrationPage() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleInputChange = (field: keyof RegistrationForm, value: any) => {
+  const handleInputChange = (field: keyof RegistrationForm, value: string | boolean) => {
     setState(s => ({
       ...s,
       form: { ...s.form, [field]: value },
@@ -71,7 +65,7 @@ export function AllyRegistrationPage() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validateForm()) return;
@@ -86,8 +80,6 @@ export function AllyRegistrationPage() {
     setState(s => ({ ...s, loading: true, error: undefined, success: undefined }));
 
     try {
-      // Insertar solicitud en ally_registrations
-      // Nota: sin crear usuario aún (requiere aprobación admin)
       const { data, error } = await aliadosSupabase
         .from('ally_registrations')
         .insert([
@@ -139,26 +131,25 @@ export function AllyRegistrationPage() {
           </p>
         </div>
 
-        <Card className="bg-slate-800 border-amber-200/20">
-          <CardHeader>
-            <CardTitle className="text-amber-200">Solicitud de Registro</CardTitle>
-            <CardDescription className="text-slate-300">
+        <div className="bg-slate-800 border border-amber-200/20 rounded-lg overflow-hidden">
+          <div className="p-6 md:p-8">
+            <h2 className="text-2xl font-bold text-amber-200 mb-2">Solicitud de Registro</h2>
+            <p className="text-slate-300 text-sm mb-6">
               Todos los campos marcados con * son requeridos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
+
             {state.error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
+              <div className="mb-6 p-4 bg-red-900/50 border border-red-600/50 rounded-lg flex gap-3">
+                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-red-200 text-sm">{state.error}</p>
+              </div>
             )}
 
             {state.success && (
-              <Alert className="mb-6 bg-green-900/50 border-green-600/50">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <AlertDescription className="text-green-200">{state.success}</AlertDescription>
-              </Alert>
+              <div className="mb-6 p-4 bg-green-900/50 border border-green-600/50 rounded-lg flex gap-3">
+                <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <p className="text-green-200 text-sm">{state.success}</p>
+              </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -168,12 +159,12 @@ export function AllyRegistrationPage() {
                   <User className="inline w-4 h-4 mr-2" />
                   Nombre Completo *
                 </label>
-                <Input
+                <input
                   type="text"
                   value={state.form.full_name}
-                  onChange={e => handleInputChange('full_name', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('full_name', e.target.value)}
                   placeholder="Juan Pérez"
-                  className="bg-slate-700 border-amber-200/20 text-white placeholder:text-slate-500"
+                  className="w-full bg-slate-700 border border-amber-200/20 text-white placeholder:text-slate-500 rounded px-4 py-2"
                   disabled={state.loading}
                 />
                 {state.formErrors.full_name && (
@@ -187,12 +178,12 @@ export function AllyRegistrationPage() {
                   <Mail className="inline w-4 h-4 mr-2" />
                   Email *
                 </label>
-                <Input
+                <input
                   type="email"
                   value={state.form.email}
-                  onChange={e => handleInputChange('email', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('email', e.target.value)}
                   placeholder="juan@example.com"
-                  className="bg-slate-700 border-amber-200/20 text-white placeholder:text-slate-500"
+                  className="w-full bg-slate-700 border border-amber-200/20 text-white placeholder:text-slate-500 rounded px-4 py-2"
                   disabled={state.loading}
                 />
                 {state.formErrors.email && (
@@ -206,12 +197,12 @@ export function AllyRegistrationPage() {
                   <Phone className="inline w-4 h-4 mr-2" />
                   Teléfono (opcional)
                 </label>
-                <Input
+                <input
                   type="tel"
                   value={state.form.phone || ''}
-                  onChange={e => handleInputChange('phone', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('phone', e.target.value)}
                   placeholder="+52 5555551234"
-                  className="bg-slate-700 border-amber-200/20 text-white placeholder:text-slate-500"
+                  className="w-full bg-slate-700 border border-amber-200/20 text-white placeholder:text-slate-500 rounded px-4 py-2"
                   disabled={state.loading}
                 />
               </div>
@@ -222,12 +213,12 @@ export function AllyRegistrationPage() {
                   <MapPin className="inline w-4 h-4 mr-2" />
                   Ciudad (opcional)
                 </label>
-                <Input
+                <input
                   type="text"
                   value={state.form.city || ''}
-                  onChange={e => handleInputChange('city', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('city', e.target.value)}
                   placeholder="Ciudad de México"
-                  className="bg-slate-700 border-amber-200/20 text-white placeholder:text-slate-500"
+                  className="w-full bg-slate-700 border border-amber-200/20 text-white placeholder:text-slate-500 rounded px-4 py-2"
                   disabled={state.loading}
                 />
               </div>
@@ -235,14 +226,15 @@ export function AllyRegistrationPage() {
               {/* Autorización de Datos */}
               <div className="border-t border-amber-200/20 pt-6">
                 <div className="flex items-start gap-3">
-                  <Checkbox
+                  <input
+                    type="checkbox"
                     id="share_data"
                     checked={state.form.share_data_agreed}
-                    onCheckedChange={checked =>
-                      handleInputChange('share_data_agreed', checked === true)
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      handleInputChange('share_data_agreed', e.target.checked)
                     }
                     disabled={state.loading}
-                    className="mt-1"
+                    className="w-4 h-4 mt-1 bg-slate-700 border border-amber-200/20 rounded"
                   />
                   <label htmlFor="share_data" className="text-sm text-slate-300 cursor-pointer flex-1">
                     Autorizo a Charlitron Digital a procesar y compartir mis datos de contacto
@@ -254,34 +246,36 @@ export function AllyRegistrationPage() {
                 )}
               </div>
 
-              {/* Aviso Legal Corto */}
-              <Alert className="bg-amber-950/30 border-amber-200/30">
-                <AlertCircle className="h-4 w-4 text-amber-200" />
-                <AlertDescription className="text-amber-100 text-xs">
-                  <strong>Nota importante:</strong> Tu solicitud será revisada por el administrador.
-                  No recibirás acceso automático. Lee nuestro{' '}
-                  <a href="#" className="underline hover:text-amber-200">
-                    aviso de privacidad
-                  </a>{' '}
-                  y{' '}
-                  <a href="#" className="underline hover:text-amber-200">
-                    términos de servicio
-                  </a>
-                  .
-                </AlertDescription>
-              </Alert>
+              {/* Aviso Legal */}
+              <div className="bg-amber-950/30 border border-amber-200/30 rounded p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="h-4 w-4 text-amber-200 flex-shrink-0 mt-0.5" />
+                  <p className="text-amber-100 text-xs">
+                    <strong>Nota importante:</strong> Tu solicitud será revisada por el administrador.
+                    No recibirás acceso automático. Lee nuestro{' '}
+                    <a href="#" className="underline hover:text-amber-200">
+                      aviso de privacidad
+                    </a>{' '}
+                    y{' '}
+                    <a href="#" className="underline hover:text-amber-200">
+                      términos de servicio
+                    </a>
+                    .
+                  </p>
+                </div>
+              </div>
 
               {/* Submit */}
-              <Button
+              <button
                 type="submit"
                 disabled={state.loading}
-                className="w-full bg-amber-200 text-slate-950 hover:bg-amber-300 font-semibold py-2"
+                className="w-full bg-amber-200 text-slate-950 hover:bg-amber-300 disabled:opacity-50 font-semibold py-2 rounded"
               >
                 {state.loading ? 'Enviando...' : 'Enviar Solicitud'}
-              </Button>
+              </button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="mt-8 text-center text-slate-400 text-sm">

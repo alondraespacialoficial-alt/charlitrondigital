@@ -1,28 +1,9 @@
 /**
- * Aliados Admin Panel — Conectado a Supabase
- * 4 tabs: Aliados (registro + aprobación), Referidos, Ventas, Comisiones
- * Datos REALES, sin ficticios.
+ * Aliados Admin Panel — Conectado a Supabase Real
+ * 4 tabs: Aliados, Referidos, Ventas, Comisiones
+ * Datos REALES, sin ficticios (interfaz simplificada, sin librerías UI)
  */
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  FileText,
-  Mail,
-  MoreVertical,
-  Phone,
-  TrendingUp,
-  Trash2,
-  Save,
-} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AliadosRepository } from './aliadosRepository';
 import { aliadosSupabase } from './aliadosSupabase';
@@ -35,13 +16,9 @@ import type {
   Commission,
   CommissionPayment,
 } from './aliadosRepository';
+import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
-interface TabViewState {
-  tab: 'allies' | 'referrals' | 'sales' | 'commissions';
-  selectedId?: string;
-  loading: boolean;
-  error?: string;
-}
+type TabType = 'allies' | 'referrals' | 'sales' | 'commissions';
 
 interface AdminPanelData {
   registrations: AllyRegistration[];
@@ -54,29 +31,34 @@ interface AdminPanelData {
 }
 
 const StatusBadge = ({ status }: { status: string }) => {
-  const variants: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
-    pending: 'default',
-    approved: 'secondary',
-    rejected: 'destructive',
-    expired: 'destructive',
-    active: 'secondary',
-    new: 'default',
-    contacted: 'outline',
-    interested: 'secondary',
-    closed: 'destructive',
-    duplicate: 'destructive',
-    assigned: 'default',
-    approved: 'secondary',
-    partially_paid: 'outline',
-    paid: 'secondary',
-    cancelled: 'destructive',
+  const colors: { [key: string]: string } = {
+    pending: 'bg-yellow-900/50 text-yellow-200',
+    approved: 'bg-green-900/50 text-green-200',
+    rejected: 'bg-red-900/50 text-red-200',
+    expired: 'bg-gray-900/50 text-gray-200',
+    active: 'bg-green-900/50 text-green-200',
+    new: 'bg-blue-900/50 text-blue-200',
+    contacted: 'bg-cyan-900/50 text-cyan-200',
+    interested: 'bg-purple-900/50 text-purple-200',
+    closed: 'bg-red-900/50 text-red-200',
+    duplicate: 'bg-red-900/50 text-red-200',
+    assigned: 'bg-blue-900/50 text-blue-200',
+    partially_paid: 'bg-orange-900/50 text-orange-200',
+    paid: 'bg-green-900/50 text-green-200',
+    cancelled: 'bg-red-900/50 text-red-200',
   };
 
-  return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+  return (
+    <span className={`px-2 py-1 rounded text-xs font-semibold ${colors[status] || 'bg-gray-900/50 text-gray-200'}`}>
+      {status}
+    </span>
+  );
 };
 
 export function AliadosAdminPanel() {
-  const [state, setState] = useState<TabViewState>({ tab: 'allies', loading: true });
+  const [currentTab, setCurrentTab] = useState<TabType>('allies');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
   const [data, setData] = useState<AdminPanelData>({
     registrations: [],
     allies: [],
@@ -89,18 +71,16 @@ export function AliadosAdminPanel() {
 
   const repo = aliadosSupabase ? new AliadosRepository(aliadosSupabase) : null;
 
-  // Cargar datos al montar
   useEffect(() => {
     if (!repo) {
-      setState(s => ({ ...s, error: 'Supabase no configurado', loading: false }));
+      setError('Supabase no configurado');
+      setLoading(false);
       return;
     }
 
     const loadData = async () => {
       try {
-        setState(s => ({ ...s, loading: true, error: undefined }));
-        
-        // Cargar todos los datos en paralelo
+        setLoading(true);
         const [registrations, allies, referrals, sales, payments, commissions, commissionPayments] =
           await Promise.all([
             repo.listRegistrations().catch(() => []),
@@ -121,11 +101,10 @@ export function AliadosAdminPanel() {
           commissions,
           commissionPayments,
         });
-
-        setState(s => ({ ...s, loading: false }));
+        setLoading(false);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Error cargando datos';
-        setState(s => ({ ...s, loading: false, error: message }));
+        setError(err instanceof Error ? err.message : 'Error cargando datos');
+        setLoading(false);
       }
     };
 
@@ -136,28 +115,12 @@ export function AliadosAdminPanel() {
     if (!repo) return;
     try {
       await repo.approveRegistration(regId);
-      // Recargar
       const updated = data.registrations.map(r =>
         r.id === regId ? { ...r, status: 'approved' as const } : r
       );
       setData(d => ({ ...d, registrations: updated }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error aprobando registro';
-      setState(s => ({ ...s, error: message }));
-    }
-  };
-
-  const handleRejectRegistration = async (regId: string, reason: string) => {
-    if (!repo) return;
-    try {
-      await repo.rejectRegistration(regId, reason);
-      const updated = data.registrations.map(r =>
-        r.id === regId ? { ...r, status: 'rejected' as const } : r
-      );
-      setData(d => ({ ...d, registrations: updated }));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error rechazando registro';
-      setState(s => ({ ...s, error: message }));
+      setError(err instanceof Error ? err.message : 'Error aprobando');
     }
   };
 
@@ -165,66 +128,62 @@ export function AliadosAdminPanel() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-amber-200 mb-2">
-            Panel de Administrador
-          </h1>
-          <p className="text-slate-300">Gestión integral del programa Aliados Charlitron</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-amber-200 mb-2">Panel de Administrador</h1>
+          <p className="text-slate-300">Gestión del programa Aliados Charlitron</p>
         </div>
 
-        {state.error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{state.error}</AlertDescription>
-          </Alert>
+        {error && (
+          <div className="mb-6 p-4 bg-red-900/50 border border-red-600/50 rounded-lg flex gap-3">
+            <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+            <p className="text-red-200">{error}</p>
+          </div>
         )}
 
-        {state.loading && (
-          <Card className="bg-slate-800 border-amber-200/20">
-            <CardContent className="p-8 text-center text-slate-300">
-              <Clock className="h-8 w-8 animate-spin mx-auto mb-2 text-amber-200" />
-              Cargando datos...
-            </CardContent>
-          </Card>
+        {loading && (
+          <div className="text-center py-12">
+            <Clock className="h-8 w-8 animate-spin mx-auto mb-2 text-amber-200" />
+            <p className="text-slate-300">Cargando datos...</p>
+          </div>
         )}
 
-        {!state.loading && (
-          <Tabs value={state.tab} onValueChange={(tab: any) => setState(s => ({ ...s, tab }))}>
-            <TabsList className="grid w-full grid-cols-4 bg-slate-800 border border-amber-200/20">
-              <TabsTrigger value="allies" className="data-[state=active]:bg-amber-200 data-[state=active]:text-slate-950">
-                <FileText className="w-4 h-4 mr-2" />
-                Aliados
-              </TabsTrigger>
-              <TabsTrigger value="referrals" className="data-[state=active]:bg-amber-200 data-[state=active]:text-slate-950">
-                <Mail className="w-4 h-4 mr-2" />
-                Referidos
-              </TabsTrigger>
-              <TabsTrigger value="sales" className="data-[state=active]:bg-amber-200 data-[state=active]:text-slate-950">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Ventas
-              </TabsTrigger>
-              <TabsTrigger value="commissions" className="data-[state=active]:bg-amber-200 data-[state=active]:text-slate-950">
-                <DollarSign className="w-4 h-4 mr-2" />
-                Comisiones
-              </TabsTrigger>
-            </TabsList>
+        {!loading && (
+          <>
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6 border-b border-amber-200/20">
+              {(['allies', 'referrals', 'sales', 'commissions'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setCurrentTab(tab)}
+                  className={`px-4 py-2 font-semibold ${
+                    currentTab === tab
+                      ? 'text-amber-200 border-b-2 border-amber-200'
+                      : 'text-slate-400 hover:text-amber-200'
+                  }`}
+                >
+                  {tab === 'allies'
+                    ? 'Aliados'
+                    : tab === 'referrals'
+                      ? 'Referidos'
+                      : tab === 'sales'
+                        ? 'Ventas'
+                        : 'Comisiones'}
+                </button>
+              ))}
+            </div>
 
-            {/* TAB: ALIADOS */}
-            <TabsContent value="allies" className="space-y-4">
-              <Card className="bg-slate-800 border-amber-200/20">
-                <CardHeader>
-                  <CardTitle className="text-amber-200">Solicitudes de Registro</CardTitle>
-                  <CardDescription className="text-slate-300">
-                    {data.registrations.length} solicitud(es)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+            {/* ALIADOS TAB */}
+            {currentTab === 'allies' && (
+              <div className="space-y-6">
+                {/* Solicitudes */}
+                <div className="bg-slate-800 border border-amber-200/20 rounded-lg p-6">
+                  <h2 className="text-xl font-bold text-amber-200 mb-4">Solicitudes de Registro</h2>
                   {data.registrations.length === 0 ? (
-                    <p className="text-slate-400">No hay solicitudes de registro</p>
+                    <p className="text-slate-400">No hay solicitudes</p>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {data.registrations.map(reg => (
-                        <div key={reg.id} className="border border-amber-200/20 rounded-lg p-4 bg-slate-700/50">
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div key={reg.id} className="border border-amber-200/10 rounded p-4 bg-slate-700/30">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
                             <div>
                               <p className="text-xs text-slate-400">Nombre</p>
                               <p className="font-semibold text-amber-200">{reg.full_name}</p>
@@ -243,46 +202,29 @@ export function AliadosAdminPanel() {
                             </div>
                           </div>
                           {reg.status === 'pending' && (
-                            <div className="mt-4 flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => handleApproveRegistration(reg.id)}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Aprobar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleRejectRegistration(reg.id, 'Información incompleta')}
-                              >
-                                Rechazar
-                              </Button>
-                            </div>
+                            <button
+                              onClick={() => handleApproveRegistration(reg.id)}
+                              className="px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-sm rounded"
+                            >
+                              <CheckCircle className="inline w-4 h-4 mr-2" />
+                              Aprobar
+                            </button>
                           )}
                         </div>
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
 
-              <Card className="bg-slate-800 border-amber-200/20">
-                <CardHeader>
-                  <CardTitle className="text-amber-200">Aliados Activos</CardTitle>
-                  <CardDescription className="text-slate-300">
-                    {data.allies.length} aliado(s)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                {/* Aliados Activos */}
+                <div className="bg-slate-800 border border-amber-200/20 rounded-lg p-6">
+                  <h2 className="text-xl font-bold text-amber-200 mb-4">Aliados Activos ({data.allies.length})</h2>
                   {data.allies.length === 0 ? (
-                    <p className="text-slate-400">No hay aliados activos</p>
+                    <p className="text-slate-400">No hay aliados</p>
                   ) : (
                     <div className="space-y-2">
                       {data.allies.map(ally => (
-                        <div key={ally.user_id} className="flex items-center justify-between p-3 bg-slate-700/50 rounded border border-amber-200/10">
+                        <div key={ally.user_id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded border border-amber-200/10">
                           <div>
                             <p className="font-semibold text-amber-200">{ally.display_name}</p>
                             <p className="text-xs text-slate-400">{ally.email}</p>
@@ -292,162 +234,137 @@ export function AliadosAdminPanel() {
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </div>
+            )}
 
-            {/* TAB: REFERIDOS */}
-            <TabsContent value="referrals" className="space-y-4">
-              <Card className="bg-slate-800 border-amber-200/20">
-                <CardHeader>
-                  <CardTitle className="text-amber-200">Referidos ({data.referrals.length})</CardTitle>
-                  <CardDescription className="text-slate-300">
-                    Ver y gestionar referidos por aliado
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {data.referrals.length === 0 ? (
-                    <p className="text-slate-400">No hay referidos registrados</p>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {data.referrals.map(ref => (
-                        <div key={ref.id} className="border border-amber-200/20 rounded p-3 bg-slate-700/50">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {/* REFERIDOS TAB */}
+            {currentTab === 'referrals' && (
+              <div className="bg-slate-800 border border-amber-200/20 rounded-lg p-6">
+                <h2 className="text-xl font-bold text-amber-200 mb-4">Referidos ({data.referrals.length})</h2>
+                {data.referrals.length === 0 ? (
+                  <p className="text-slate-400">No hay referidos</p>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {data.referrals.map(ref => (
+                      <div key={ref.id} className="border border-amber-200/10 rounded p-3 bg-slate-700/30">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <p className="text-xs text-slate-400">Nombre</p>
+                            <p className="text-sm font-semibold text-amber-200">{ref.referred_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">Email</p>
+                            <p className="text-xs text-slate-300">{ref.referred_email || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">Estado</p>
+                            <StatusBadge status={ref.status} />
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">Datos compartidos</p>
+                            <p className="text-xs text-slate-200">{ref.data_share_authorized ? '✓' : '✗'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* VENTAS TAB */}
+            {currentTab === 'sales' && (
+              <div className="bg-slate-800 border border-amber-200/20 rounded-lg p-6">
+                <h2 className="text-xl font-bold text-amber-200 mb-4">Ventas ({data.sales.length})</h2>
+                {data.sales.length === 0 ? (
+                  <p className="text-slate-400">No hay ventas</p>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {data.sales.map(sale => {
+                      const salePayments = data.payments.filter(p => p.sale_id === sale.id);
+                      const totalPaid = salePayments.reduce((sum, p) => sum + p.amount_paid, 0);
+                      const remaining = sale.amount_agreed - totalPaid;
+
+                      return (
+                        <div key={sale.id} className="border border-amber-200/10 rounded p-3 bg-slate-700/30">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                             <div>
-                              <p className="text-xs text-slate-400">Nombre</p>
-                              <p className="text-sm font-semibold text-amber-200">{ref.referred_name}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400">Email</p>
-                              <p className="text-xs text-slate-300">{ref.referred_email || '-'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400">Estado</p>
-                              <StatusBadge status={ref.status} />
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400">Compartir datos</p>
-                              <p className="text-xs text-slate-200">
-                                {ref.data_share_authorized ? '✓' : '✗'}
+                              <p className="text-xs text-slate-400">Descripción</p>
+                              <p className="text-sm font-semibold text-amber-200">
+                                {sale.sale_description || 'Sin desc.'}
                               </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Acordado</p>
+                              <p className="text-sm text-slate-200">${sale.amount_agreed.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Pagado</p>
+                              <p className="text-sm text-green-300">${totalPaid.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Pendiente</p>
+                              <p className="text-sm text-orange-300">${remaining.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Pagos</p>
+                              <p className="text-sm text-slate-200">{salePayments.length}</p>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* TAB: VENTAS */}
-            <TabsContent value="sales" className="space-y-4">
-              <Card className="bg-slate-800 border-amber-200/20">
-                <CardHeader>
-                  <CardTitle className="text-amber-200">Ventas ({data.sales.length})</CardTitle>
-                  <CardDescription className="text-slate-300">
-                    Total acordado y pagos confirmados
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {data.sales.length === 0 ? (
-                    <p className="text-slate-400">No hay ventas registradas</p>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {data.sales.map(sale => {
-                        const salePayments = data.payments.filter(p => p.sale_id === sale.id);
-                        const totalPaid = salePayments.reduce((sum, p) => sum + p.amount_paid, 0);
-                        const remaining = sale.amount_agreed - totalPaid;
+            {/* COMISIONES TAB */}
+            {currentTab === 'commissions' && (
+              <div className="bg-slate-800 border border-amber-200/20 rounded-lg p-6">
+                <h2 className="text-xl font-bold text-amber-200 mb-4">Comisiones ({data.commissions.length})</h2>
+                {data.commissions.length === 0 ? (
+                  <p className="text-slate-400">No hay comisiones</p>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {data.commissions.map(comm => {
+                      const payments = data.commissionPayments.filter(p => p.commission_id === comm.id);
+                      const totalPaid = payments.reduce((sum, p) => sum + p.amount_paid, 0);
+                      const remaining = comm.commission_amount - totalPaid;
 
-                        return (
-                          <div key={sale.id} className="border border-amber-200/20 rounded p-3 bg-slate-700/50">
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                              <div>
-                                <p className="text-xs text-slate-400">Descripción</p>
-                                <p className="text-sm font-semibold text-amber-200">
-                                  {sale.sale_description || 'Sin descripción'}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Acordado</p>
-                                <p className="text-sm text-slate-200">${sale.amount_agreed.toFixed(2)}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Pagado</p>
-                                <p className="text-sm text-green-300">${totalPaid.toFixed(2)}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Pendiente</p>
-                                <p className="text-sm text-orange-300">${remaining.toFixed(2)}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Pagos</p>
-                                <p className="text-sm text-slate-200">{salePayments.length}</p>
-                              </div>
+                      return (
+                        <div key={comm.id} className="border border-amber-200/10 rounded p-3 bg-slate-700/30">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                            <div>
+                              <p className="text-xs text-slate-400">%</p>
+                              <p className="text-sm font-semibold text-amber-200">{comm.commission_percentage}%</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Monto</p>
+                              <p className="text-sm text-slate-200">${comm.commission_amount.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Pagado</p>
+                              <p className="text-sm text-green-300">${totalPaid.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Pendiente</p>
+                              <p className="text-sm text-orange-300">${remaining.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Estado</p>
+                              <StatusBadge status={comm.status} />
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* TAB: COMISIONES */}
-            <TabsContent value="commissions" className="space-y-4">
-              <Card className="bg-slate-800 border-amber-200/20">
-                <CardHeader>
-                  <CardTitle className="text-amber-200">Comisiones ({data.commissions.length})</CardTitle>
-                  <CardDescription className="text-slate-300">
-                    Asignación, aprobación y pagos
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {data.commissions.length === 0 ? (
-                    <p className="text-slate-400">No hay comisiones registradas</p>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {data.commissions.map(comm => {
-                        const payments = data.commissionPayments.filter(
-                          p => p.commission_id === comm.id && !p.confirmed_at
-                        );
-                        const totalPaid = payments.reduce((sum, p) => sum + p.amount_paid, 0);
-                        const remaining = comm.commission_amount - totalPaid;
-
-                        return (
-                          <div key={comm.id} className="border border-amber-200/20 rounded p-3 bg-slate-700/50">
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                              <div>
-                                <p className="text-xs text-slate-400">Porcentaje</p>
-                                <p className="text-sm font-semibold text-amber-200">{comm.commission_percentage}%</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Monto</p>
-                                <p className="text-sm text-slate-200">${comm.commission_amount.toFixed(2)}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Pagado</p>
-                                <p className="text-sm text-green-300">${totalPaid.toFixed(2)}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Pendiente</p>
-                                <p className="text-sm text-orange-300">${remaining.toFixed(2)}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400">Estado</p>
-                                <StatusBadge status={comm.status} />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
