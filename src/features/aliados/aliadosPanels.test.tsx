@@ -55,6 +55,17 @@ test('Aliados: Aprobar a pendientes, Pausar a activos y Reactivar a pausados', (
   assert.equal(/Sí, aprobar|Sí, pausar|Sí, reactivar/.test(html), false, 'la confirmacion aparece solo tras pulsar');
 });
 
+test('Aliados: "Reenviar invitación" solo aparece para invitaciones sin aceptar', () => {
+  const allies = [
+    { user_id: 'i', display_name: 'Aliado Invitado', email: 'i@x.co', status: 'active' as const, created_at: '2026-10-01', confirmed_at: null },
+    { user_id: 'c', display_name: 'Aliado Confirmado', email: 'c@x.co', status: 'active' as const, created_at: '2026-10-01', confirmed_at: '2026-10-02' },
+    { user_id: 'u', display_name: 'Aliado Sin Dato', email: 'u@x.co', status: 'active' as const, created_at: '2026-10-01' },
+  ];
+  const html = renderToStaticMarkup(createElement(AlliesSection, { ...props, data: { ...data, allies } }));
+  assert.equal((html.match(/Reenviar invitación/g) ?? []).length, 1);
+  assert.equal((html.match(/Invitación sin aceptar/g) ?? []).length, 1);
+});
+
 test('Referidos: estado, notas internas, duplicado y registrar venta', () => {
   const html = renderToStaticMarkup(createElement(ReferralsSection, props));
   assert.match(html, /Cliente Uno/);

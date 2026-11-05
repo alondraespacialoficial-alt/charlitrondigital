@@ -1,4 +1,4 @@
-export const ALIADOS_PREVIEW_BRANCH = 'feat/aliados-charlitron';
+export const ALIADOS_PREVIEW_BRANCHES = ['feat/aliados-charlitron', 'feat/aliados-registro-publico'] as const;
 
 // Referencia del proyecto editorial (produccion): nunca puede usarse para Aliados.
 const EDITORIAL_PROJECT_REF = 'rvvqhpbtqgjpzflopflv';
@@ -12,12 +12,15 @@ export interface AliadosBuildConfig {
 
 const EMPTY: AliadosBuildConfig = { url: '', anonKey: '' };
 
-// Fuera de Vercel (desarrollo local) se permite; en Vercel solo en Production y en Preview de la rama de Aliados.
+// Fuera de Vercel (desarrollo local) se permite; en Vercel solo en Production y en Preview de las ramas de Aliados.
 export function isAliadosAuthBuildAllowed(environment: Environment): boolean {
   const onVercel = Boolean(environment.VERCEL || environment.VERCEL_ENV);
   if (!onVercel) return true;
   if (environment.VERCEL_ENV === 'production') return true;
-  return environment.VERCEL_ENV === 'preview' && environment.VERCEL_GIT_COMMIT_REF === ALIADOS_PREVIEW_BRANCH;
+  return (
+    environment.VERCEL_ENV === 'preview' &&
+    ALIADOS_PREVIEW_BRANCHES.some((branch) => branch === environment.VERCEL_GIT_COMMIT_REF)
+  );
 }
 
 // En Production, Aliados es obligatorio: sin variables el build falla en vez de publicar un modulo desconectado.

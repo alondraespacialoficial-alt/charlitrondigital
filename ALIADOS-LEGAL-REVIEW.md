@@ -1,235 +1,84 @@
-# Textos Legales — Aliados Charlitron
+# Revisión legal — Charlitron Digital y Aliados Charlitron
 
-**Estado**: En preparación. Requiere revisión legal.
+**Estado**: borrador pendiente de revisión jurídica. El registro público de aliados sigue cerrado.
 
----
+Los textos publicados viven en el código y son la fuente única; este documento no los copia para que no se desfasen:
 
-## 1. Aviso de Privacidad (Módulo Aliados)
-
-### Responsable de datos
-```
-CHARLITRON DIGITAL MÉXICO
-RFC: [REQUERIDO — verificar en constancia]
-Domicilio: [REQUERIDO — dirección legal]
-Email: privacidad@charlitrondigital.com
-Teléfono: [REQUERIDO]
-```
-
-### Datos que recopilamos
-- **Solicitud de Registro**: nombre completo, email, teléfono, ciudad, autorización de compartir datos
-- **Referidos**: nombre, email, teléfono, ciudad, organización, relación, fuente de contacto
-- **Operativa**: registro de ventas, pagos confirmados, comisiones asignadas y pagadas
-- **Auditoría**: cambios en registros (quién, cuándo, qué cambió)
-
-### Fines del tratamiento
-1. Gestionar solicitudes de registro como aliado
-2. Permitir seguimiento de referidos y oportunidades de negocio
-3. Registrar ventas y comisiones acordadas
-4. Validar integridad y auditoría del programa
-5. Cumplimiento legal y administrativo
-
-### Base legal
-- Consentimiento explícito (casilla "Autorizo compartir mis datos")
-- Ejecución de contrato (programa de alianzas)
-- Obligaciones legales (auditoría, impuestos)
-
-### Derechos del Aliado
-- Acceso: solicitar copia de tus datos
-- Rectificación: corregir datos inexactos
-- Cancelación: solicitar exclusión del programa
-- Portabilidad: obtener datos en formato estándar
-- Limitación: restringir ciertos usos
-
-**Para ejercer derechos**: privacidad@charlitrondigital.com
-
-### Retención de datos
-- Solicitudes rechazadas: 7 días; luego se eliminan
-- Aliados activos: durante vigencia de contrato + 3 años posteriores
-- Auditoría: permanente (legal)
-- Datos de referidos: mientras aliado esté activo + 1 año
-
-### Compartir datos
-- **Internamente**: acceso restringido a administrador de programa
-- **Externo**: **NO** sin autorización escrita adicional
-- **Legalmente**: si lo requiere autoridad competente
-
-### Seguridad
-- Encriptación en tránsito (HTTPS/TLS)
-- Encriptación en reposo en Supabase
-- Control de acceso por roles (RLS)
-- Auditoría de cambios
-- Revisiones de seguridad periódicas
-
-### Cambios a este aviso
-Nos reservamos derecho de actualizar este aviso. Notificaremos cambios materiales por email.
-
-**Última actualización**: [FECHA DEL DEPLOY]
+| Documento | Dónde vive |
+| --- | --- |
+| Aviso de privacidad general del sitio | `src/components/LegalPage.tsx` (pestaña 1) |
+| Términos y condiciones de uso del sitio | `src/components/LegalPage.tsx` (pestaña 2) |
+| Aviso de privacidad del programa Aliados (`/aliados/privacidad`) | `PRIVACY_SECTIONS` en `src/features/aliados/aliadosLegal.ts` |
+| Términos del programa Aliados (`/aliados/terminos`) | `TERMS_SECTIONS` en `src/features/aliados/aliadosLegal.ts` |
+| Identificación del responsable | `src/data/legalEntity.ts` |
+| Pendientes jurídicos | `LEGAL_PENDING` en `src/features/aliados/aliadosLegal.ts` |
 
 ---
 
-## 2. Términos de Servicio (Programa Aliados)
+## 1. Identificación (decisión confirmada por Alondra y Charlie)
 
-### 1. Aceptación de términos
-Al registrarte en el Programa Aliados de Charlitron, aceptas estos términos completos.
+- **Responsable legal y titular fiscal**: Carlos Leonardo Álvarez Cedillo, persona física, con su consentimiento. Sustituye a la identificación anterior ("José Adrián Álvarez Carlos y/o Charlitron Digital S.A. de C.V."), que se retiró del aviso general y del borrador de Aliados.
+- **Administrador de Aliados Charlitron**: José Adrián Álvarez Carlos, director comercial. Figura solo con ese rol en el aviso y los términos de Aliados.
+- **Contacto propuesto** (privacidad, ARCO y dudas legales): `nadrian18@gmail.com`, tomado de `CONTACT_EMAIL`. Se eliminaron `privacidad@charlitrondigital.com` y `aliados@charlitron.com`, que no estaban confirmados.
+- **Domicilio fiscal**: Calle Lanzagorta 330, colonia San Sebastián, C.P. 78349, San Luis Potosí, San Luis Potosí, México (tomado de la Constancia de Situación Fiscal). Capturado en `LEGAL_FISCAL_ADDRESS`. Carlos Leonardo Álvarez Cedillo **autorizó expresamente** publicarlo como domicilio del responsable (art. 16 LFPDPPP), por lo que `LEGAL_ADDRESS_PUBLICATION_AUTHORIZED = true`. Se muestra únicamente en el aviso de privacidad general y en el de Aliados; no aparece en términos, cookies, landing ni formularios.
+- **No se incorporan** CURP, RFC, idCIF ni copias de la constancia; una prueba lo verifica.
 
-### 2. Definiciones
-- **Aliado**: Persona autorizada por Charlitron para referir clientes potenciales
-- **Referido**: Cliente potencial presentado por un aliado
-- **Venta**: Acuerdo comercial entre Charlitron y un referido
-- **Comisión**: Porcentaje del monto cobrado (no acordado)
+No se modificaron créditos de autoría ni los pies de página con la marca "Charlitron Digital" (son marca, no identificación del responsable).
 
-### 3. Registro y aprobación
-- Registro es voluntario y requiere información exacta
-- Aprobación está a criterio de Charlitron (sin obligación)
-- Charlitron puede rechazar solicitud sin explicar razón
-- Aprobación no garantiza pagos; comisiones requieren aprobación adicional
+## 2. Tratamientos separados
 
-### 4. Responsabilidades del Aliado
-- Proporcionar información veraz y actualizada
-- No usar datos de referidos para otros fines
-- Respetar confidencialidad de montos y términos internos
-- No interferir en negociación entre Charlitron y referido
-- Avisar cambios de contacto dentro de 48 hrs
+- **Aviso general**: datos de quien pide información o cotizaciones (nombre, correo, WhatsApp, negocio, mensaje). Finalidades sin cambios. No menciona Aliados.
+- **Aviso de Aliados**: solicitud y cuenta del aliado, datos de las personas recomendadas y operación (ventas, cobros, comisiones, auditoría). Declara que es independiente del general y separa las finalidades sobre el aliado de las finalidades sobre las personas recomendadas.
 
-### 5. Referidos
-- Datos de referidos son propiedad de Charlitron
-- Aliado puede ver **solo** estado y comisiones de sus referidos
-- **Nunca verá** montos de venta, pagos internos, ni notas administrativas
-- Duplicados: si otro aliado presenta mismo cliente, Charlitron decide asignación
+## 3. Inconsistencias resueltas
 
-### 6. Ventas y Pagos
-- Ventas se registran administrativamente por Charlitron
-- Comisión se asigna sobre montos **realmente cobrados**, no acordados
-- Pagos parciales se aceptan y reducen comisión proporcionalmente
-- **Reversión de cobro**: comisión se reduce o se revierte (con notificación)
+| Tema | Antes | Ahora |
+| --- | --- | --- |
+| Responsable | José Adrián "y/o" S.A. de C.V.; contactos de dominios distintos | Carlos Leonardo Álvarez Cedillo; un solo contacto |
+| Conservación de solicitudes rechazadas | "Se eliminan a los 7 días" | Se conservan mientras no se defina un plazo de eliminación. Los 30 días son solo el enfriamiento antes de aceptar otra solicitud del mismo correo (migración 0004), no el plazo de conservación. No se promete eliminación automática porque no está implementada |
+| Cancelación vs. auditoría | "Auditoría permanente" junto con derecho de cancelación | Se declara que ventas, cobros, comisiones y auditoría no se eliminan por diseño; el alcance de la cancelación queda pendiente |
+| Datos de referidos | "Son propiedad de Charlitron" | Son datos de terceros; el aliado declara su autorización (la plataforma la exige); finalidades propias y sin compartirse con otros aliados |
+| Autorización de datos | "Autorizo procesar y *compartir* mis datos" | "Tratar" mis datos para las finalidades del aliado; no se comparten con terceros |
+| Duplicados | "Charlitron decide la asignación" | La primera recomendación es la referencia (como hace el sistema) y Charlitron decide manualmente las demás |
+| Comisiones | "Porcentaje del monto cobrado (no acordado)" y "no puede superar 100 %" | Monto acordado por escrito por proyecto, sin porcentajes fijos; la parte liberable es proporcional a lo cobrado y nunca excede el monto acordado; asignación, autorización y pago manuales |
+| Medios de pago | Transferencia, cheque o efectivo | "Por el medio que se acuerde" |
+| Plazos (48 h, 30 días, 7 días) | Cifras sin validar en el texto público | Retirados del texto público y listados como pendientes |
+| Pasos de activación | `REGISTRO_PUBLICO_HABILITADO` y proyecto `charlitron-aliados-test` | Ver sección 5 |
 
-### 7. Comisiones
-- Son **manuales y administrativas**, nunca automáticas
-- Requieren aprobación separada (asignación ≠ aprobación)
-- Pueden ser pagadas en parcialidades (aliado puede solicitar)
-- No pueden superar 100% de monto cobrado (con validación automática)
-- Cancelación es posible si hay incumplimiento de este acuerdo
+## 4. Pendientes que requieren revisión jurídica
 
-### 8. Pagos
-- Métodos: transferencia bancaria, cheque, efectivo (según acuerdo)
-- Charlitron confirma recepción de fondos antes de liberar comisión
-- No hay automatización; cada pago requiere aprobación manual
-- Reversiones de cobro generan reducción inmediata de comisión pendiente
-- Historial auditable de todos los pagos
+Lista completa y vigente en `LEGAL_PENDING`. Resumen:
 
-### 9. Confidencialidad
-El aliado acepta **no divulgar**:
-- Nombres de clientes de Charlitron (si no autorizados)
-- Montos de venta o comisión de otros aliados
-- Términos internos de negociación
-- Contenido de notas administrativas
-- Datos de contacto de otros aliados
+1. Constancia escrita de la designación del responsable y de su aceptación (la autorización de publicar el domicilio ya fue otorgada).
+2. Relación de José Adrián con el tratamiento (personal del responsable o encargado).
+3. Confirmar el canal oficial de privacidad (el correo propuesto es el del administrador del programa).
+4. Procedimiento, medio y plazos ARCO; revocación del consentimiento; derechos adicionales.
+5. **Retención**: plazos definitivos y mecanismo de eliminación; hoy no existe proceso de eliminación y no debe prometerse eliminación automática hasta implementarla.
+6. Cancelación frente a registros inmutables (ventas, comisiones, cobros y auditoría).
+7. **Transferencias y encargados**: Supabase y Vercel, posible tratamiento fuera de México.
+8. Cómo se informa a las personas recomendadas al ser contactadas.
+9. **Documentación fiscal**: comprobantes y retenciones por comisiones; facturación a nombre del titular fiscal.
+10. Formato del acuerdo escrito de comisión por proyecto.
+11. Plazos de aviso previo para cambios o terminación.
+12. Ley aplicable, jurisdicción, GDPR/CCPA.
+13. Revisión y firma de abogado y fecha de vigencia de los tres documentos (el aviso general lleva "Noviembre de 2026" y debe confirmarse al publicar).
 
-### 10. Terminación
-Charlitron puede terminar esta relación:
-- Por incumplimiento de este acuerdo
-- Si hay actividad fraudulenta
-- Si aliado solicita explícitamente
-- Por cambios en el programa (30 días previo aviso)
+## 5. Activación del registro público
 
-Aliado puede solicitarresolución en cualquier momento escribiendo a aliados@charlitron.com
+Requiere **ambas** llaves; ninguna está abierta:
 
-### 11. Limitación de responsabilidad
-- Charlitron no es responsable por falta de referidos recibidos
-- Charlitron no garantiza conversión de referidos en ventas
-- Charlitron no es liable por cambios de comisión o terminación
-- El Aliado acepta riesgo de negocio inherente a este modelo
+1. `ALIADOS_LEGAL_APPROVED = true` en `aliadosLegal.ts` (solo con `LEGAL_PENDING` vacío; una prueba lo exige).
+2. `aliados_settings.registration_open = true` en la base, con la migración `aliados-lab-0004-registration.sql` instalada.
 
-### 12. Ley aplicable
-Este acuerdo se rige por leyes de México. Controversias se resuelven en tribunales competentes.
+Además: configurar en el Supabase de Aliados las Redirect URLs (`/aliados/activar`), SMTP propio y la vigencia de las invitaciones, y probar una invitación real.
 
-**Última actualización**: [FECHA DEL DEPLOY]
+## 6. Notas técnicas de seguridad
 
----
+- Supabase de Aliados independiente del editorial; las variables `ALIADOS_*` se validan en el build y en Production son obligatorias.
+- RLS en todas las tablas; el aliado solo lee vistas `ally_my_*`, el administrador vistas `admin_*`, y toda escritura pasa por funciones `SECURITY DEFINER`.
+- La clave de servicio solo existe en el servidor (`/api/aliados-approve-registration`, `/api/aliados-resend-invitation`).
+- Auditoría de solo anexar; cobros y pagos inmutables (se corrigen con reversiones).
+- Registro: máximo 10 solicitudes por hora, 30 por día y 100 pendientes (migración 0004).
 
-## 3. Autorización de Datos (Formulario de Registro)
-
-```
-□ Autorizo a Charlitron Digital a procesar y compartir mis datos de contacto
-  (nombre, email, teléfono, ciudad) exclusivamente para:
-  - Gestión del Programa Aliados
-  - Comunicaciones relacionadas con referidos y comisiones
-  - Auditoría y cumplimiento legal
-  - Contacto por cambios en el programa
-
-  No usaré mis datos para otras personas ni otros programas sin consentimiento
-  adicional.
-
-Acepto: ☐
-Rechazó: ☐
-```
-
----
-
-## 4. Checklist de Validación Legal
-
-**Antes de activar registro público**:
-
-- [ ] Constancia legal de Charlitron (RFC, domicilio, representante)
-- [ ] Abogado revisa Aviso de Privacidad
-- [ ] Abogado revisa Términos de Servicio
-- [ ] Confirmar se alinean con GDPR si hay aliados/referidos en EU
-- [ ] Confirmar se alinean con CCPA si hay data de California
-- [ ] Email legal de contacto (privacidad@, legal@)
-- [ ] Proceso de reclamos y ARCO (Acceso, Rectificación, Cancelación, Oposición)
-- [ ] Responsable de datos designado
-- [ ] Seguro de responsabilidad civil revisado
-- [ ] Versión final traducida al español e inglés (si aplica)
-
----
-
-## 5. Notas Técnicas de Seguridad
-
-### Protecciones activas en la base de datos
-
-1. **Row Level Security (RLS)**
-   - Cada aliado **solo ve** sus referidos, ventas, y comisiones
-   - Montos internos están ocultos al aliado en SELECT
-   - Admin ve todo
-
-2. **Funciones SECURITY DEFINER**
-   - Todas las operaciones (aprobar registro, pagar comisión) requieren admin
-   - No hay SQL injection possible (prepared statements)
-   - Errores no exponen contraseñas ni claves
-
-3. **Auditoría**
-   - Todos los cambios quedan registrados (creación, modificación, eliminación)
-   - Incluye quién, cuándo, qué cambió (old_values/new_values en JSONB)
-   - Reversiones no eliminan historial, solo agregan nuevo registro
-
-4. **Validaciones**
-   - Comisión nunca excede monto cobrado (validado en función)
-   - Pagos revertidos actualizan comisión pendiente
-   - Datos nulos se validan antes de insertar
-
-### Protecciones en infraestructura
-
-- **Vercel Preview**: solo rama `feat/aliados-charlitron` accede a ALIADOS_* vars
-- **Supabase**: Proyecto separado (`charlitron-aliados-test`)
-- **Environment**: ALIADOS_SUPABASE_URL y ALIADOS_SUPABASE_ANON_KEY en Vercel preview
-- **.gitignore**: `.env`, `.env.local`, credenciales NO tracked
-
----
-
-## 6. Acciones Próximas
-
-Cuando la revisión legal esté completa:
-
-1. Cambiar `REGISTRO_PUBLICO_HABILITADO` de `false` a `true` en el código
-2. Ejecutar migración SQL en `charlitron-aliados-test`
-3. Ejecutar pruebas end-to-end (registro → aprobación → referido → venta → comisión)
-4. Desplegar a Vercel Preview
-5. Revisar funcionalidad completa
-6. Mercar a `main` cuando QA apruebe
-7. Desplegar a production con ALIADOS_* vars configuradas
-
----
-
-**Responsable de esta documentación**: Copilot (Engineering)  
-**Responsable legal final**: [Requerido — nombre y firma del abogado/responsable legal]  
-**Fecha de validación final**: [REQUERIDA]
+**Responsable legal final**: Carlos Leonardo Álvarez Cedillo (pendiente de revisión y firma de abogado).
+**Fecha de validación final**: pendiente.
