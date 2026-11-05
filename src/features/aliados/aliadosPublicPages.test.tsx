@@ -35,6 +35,14 @@ test('sin conexion confirmada con la base la pagina de registro NO ofrece el for
   assert.equal(/name="email"|Solicitar registro/.test(html), false);
 });
 
+test('"Volver" ocupa su propia linea y el logotipo no se encima con el', () => {
+  const html = render(createElement(AllyRegistrationPage));
+  assert.match(html, /<a [^>]*aria-label="Volver a Aliados Charlitron"[^>]*class="[^"]*\bflex w-fit\b/);
+  assert.equal(/aria-label="Volver a Aliados Charlitron"[^>]*class="[^"]*inline-flex/.test(html), false);
+  const app = readFileSync(new URL('./AliadosApp.tsx', import.meta.url), 'utf8');
+  assert.equal(/aria-label="Volver a Aliados Charlitron" className="[^"]*inline-flex/.test(app), false);
+});
+
 test('mientras falten datos legales el registro sigue cerrado por codigo', () => {
   assert.ok(LEGAL_PENDING.length > 0);
   if (ALIADOS_LEGAL_APPROVED) {

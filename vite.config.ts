@@ -20,7 +20,7 @@ export default defineConfig(({mode}) => {
   // Las variables ALIADOS_* no llevan prefijo VITE_: solo entran al bundle por la politica de aliadosSupabasePolicy.
   const aliadosEnv = {...loadEnv(mode, process.cwd(), ''), ...process.env};
   if (aliadosSupabaseWasIgnored(aliadosEnv)) {
-    console.warn('[aliados] ALIADOS_SUPABASE_* definidas, pero este entorno no es Production ni Preview de feat/aliados-charlitron: se ignoran.');
+    console.warn('[aliados] ALIADOS_SUPABASE_* definidas, pero este entorno no es Production ni Preview de una rama de Aliados: se ignoran.');
   }
   const aliadosAuth = aliadosSupabaseBuildConfig(aliadosEnv);
   return {

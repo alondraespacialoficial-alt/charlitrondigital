@@ -24,7 +24,7 @@ function Frame({ title, subtitle, children }: { title: string; subtitle?: string
     <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-4 py-10 text-zinc-100">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-grid-pattern opacity-40" />
       <section className="relative w-full max-w-md rounded-lg border border-white/10 bg-[#111114] p-6 shadow-2xl sm:p-8">
-        <Link to="/aliados" aria-label="Volver a Aliados Charlitron" className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
+        <Link to="/aliados" aria-label="Volver a Aliados Charlitron" className="mb-8 flex w-fit items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Link>
         <CharlitronLogo size="sm" showTagline={false} />
