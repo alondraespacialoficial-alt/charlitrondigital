@@ -12,6 +12,7 @@
     "audit:portfolio-storage": "tsx scripts/portfolioStorageAuditCli.ts",
     "test:aliados": "tsx --test scripts/aliadosSupabasePolicy.test.ts src/features/aliados/aliadosRole.test.ts src/features/aliados/aliadosIsolation.test.ts",
     "smoke:aliados-auth": "tsx scripts/aliadosAuthSmoke.ts",
+    "test:aliados-schema": "tsx src/features/aliados/aliadosSchemaValidation.ts",
     "probe:portfolio-manifests": "tsx scripts/portfolioManifestProbe.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"

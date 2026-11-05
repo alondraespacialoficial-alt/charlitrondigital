@@ -26,8 +26,9 @@ import { useAliadosSession, type AliadosSession } from './useAliadosSession';
 
 type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
 
-// Carga diferida: el panel administrador no viaja en el código del área del aliado.
+// Carga diferida: los paneles no viajan en el código del área de landing.
 const AliadosAdminPrototype = lazy(() => import('./AliadosAdminPrototype'));
+const AliadosAdminComplete = lazy(() => import('./AliadosAdminComplete'));
 
 const ROUTE_META_SELECTORS = [
   'meta[name="description"]',
@@ -191,7 +192,7 @@ function AdminGate({ session, onSignOut }: { session: AliadosSession; onSignOut:
   }
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#09090b]" />}>
-      <AliadosAdminPrototype onSignOut={onSignOut} />
+      <AliadosAdminComplete onSignOut={onSignOut} />
     </Suspense>
   );
 }
