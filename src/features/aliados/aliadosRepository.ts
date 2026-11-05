@@ -349,12 +349,14 @@ export class AliadosRepository {
   // ============================================
 
   async approveRegistration(registrationId: string): Promise<void> {
-    const { error } = await this.client.rpc('approve_registration', {
-      reg_id: registrationId,
-      approver_id: (await this.client.auth.getUser()).data.user?.id,
+    // Usar función segura: approve_registration_and_create_user
+    // Crea user Auth + ally_profile atómicamente, auditable
+    const { data, error } = await this.client.rpc('approve_registration_and_create_user', {
+      p_registration_id: registrationId,
     });
 
     if (error) throw new Error(`Failed to approve registration: ${error.message}`);
+    if (!data?.success) throw new Error('Approval failed');
   }
 
   async rejectRegistration(registrationId: string, reason: string): Promise<void> {
@@ -413,19 +415,30 @@ export class AliadosRepository {
     return data as string;
   }
 
-  async payCommission(commissionId: string, amount: number, method: string, reference?: string): Promise<string> {
-    const userId = (await this.client.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error('No authenticated user');
-
-    const { data, error } = await this.client.rpc('pay_commission', {
+  async payCommission(commissionId: string, amount: number): Promise<string> {
+    // Usar función segura: pay_commission_safe
+    // Valida: no supera monto acordado, respeta proporción de cobros, detecta duplicados
+    const { data, error } = await this.client.rpc('pay_commission_safe', {
       p_commission_id: commissionId,
       p_amount: amount,
-      p_method: method,
-      p_authorized_by: userId,
-      p_reference: reference,
     });
 
     if (error) throw new Error(`Failed to pay commission: ${error.message}`);
-    return data as string;
+    const result = data as { success: boolean; payment_id: string; error?: string };
+    if (!result.success) throw new Error(result.error || 'Commission payment failed');
+    return result.payment_id;
+  }
+
+  async reverseCommissionPayment(paymentId: string, reason?: string): Promise<void> {
+    // Usar función segura: reverse_commission_payment
+    // SOFT reversal: no borra, solo marca reversed_at + audita
+    const { data, error } = await this.client.rpc('reverse_commission_payment', {
+      p_payment_id: paymentId,
+      p_reason: reason,
+    });
+
+    if (error) throw new Error(`Failed to reverse payment: ${error.message}`);
+    const result = data as { success: boolean };
+    if (!result.success) throw new Error('Reversal failed');
   }
 }

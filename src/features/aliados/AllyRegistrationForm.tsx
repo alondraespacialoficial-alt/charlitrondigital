@@ -80,31 +80,26 @@ export function AllyRegistrationForm() {
     setState(s => ({ ...s, loading: true, error: undefined, success: undefined }));
 
     try {
-      const { data, error } = await aliadosSupabase
-        .from('ally_registrations')
-        .insert([
-          {
-            email: state.form.email,
-            full_name: state.form.full_name,
-            phone: state.form.phone || null,
-            city: state.form.city || null,
-            share_data_agreed: state.form.share_data_agreed,
-            status: 'pending',
-            created_at: new Date().toISOString(),
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-        ])
-        .select()
-        .single();
+      // Usar función SECURITY DEFINER: submit_registration
+      // Esta función valida entrada y guarda en ally_registrations de forma segura
+      const { data, error } = await aliadosSupabase.rpc('submit_registration', {
+        p_email: state.form.email,
+        p_full_name: state.form.full_name,
+        p_phone: state.form.phone || null,
+        p_city: state.form.city || null,
+        p_share_data_agreed: state.form.share_data_agreed,
+      });
 
       if (error) {
         throw error;
       }
 
+      const registrationId = data as string;
+
       setState(s => ({
         ...s,
         loading: false,
-        success: `Solicitud registrada exitosamente. Ref: ${data.id.slice(0, 8)}. El administrador la revisará pronto.`,
+        success: `Solicitud registrada exitosamente. Ref: ${registrationId.slice(0, 8)}. El administrador la revisará pronto.`,
         form: {
           email: '',
           full_name: '',
