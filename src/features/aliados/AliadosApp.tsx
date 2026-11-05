@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { CharlitronLogo } from '../../components/CharlitronLogo';
+import { AGENCY_SERVICES, SERVICES_LIST } from '../../data/content';
 import { applyPageMeta } from '../../lib/seo';
 
 type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
@@ -436,6 +437,7 @@ function PartnerLogin({ onLogin }: { onLogin: () => void }) {
 
 function PartnerDashboard({ onLogout }: { onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<PanelTab>('resumen');
+  const [referralOpen, setReferralOpen] = useState(false);
   const tabs: { id: PanelTab; label: string; icon: typeof UsersRound }[] = [
     { id: 'resumen', label: 'Resumen', icon: Sparkles },
     { id: 'recomendaciones', label: 'Recomendaciones', icon: UsersRound },
@@ -484,10 +486,20 @@ function PartnerDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
 
           {activeTab === 'resumen' && <DashboardOverview onViewReferrals={() => setActiveTab('recomendaciones')} />}
-          {activeTab === 'recomendaciones' && <ReferralsTable showCommission={false} />}
+          {activeTab === 'recomendaciones' && (
+            <>
+              <div className="mb-5 flex justify-end">
+                <button type="button" onClick={() => setReferralOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
+                  + Registrar nuevo referido
+                </button>
+              </div>
+              <ReferralsTable showCommission={false} />
+            </>
+          )}
           {activeTab === 'comisiones' && <CommissionList />}
         </main>
       </div>
+      {referralOpen && <NewReferralDialog onClose={() => setReferralOpen(false)} />}
     </div>
   );
 }
@@ -528,6 +540,99 @@ function SummaryMetric({ label, value, hint, icon: Icon }: { label: string; valu
       <div className="flex items-center gap-2 text-xs text-zinc-500"><Icon className="h-4 w-4 text-amber-200" />{label}</div>
       <p className="mt-3 font-display text-2xl font-semibold text-white">{value}</p>
       <p className="mt-1 text-xs text-zinc-600">{hint}</p>
+    </div>
+  );
+}
+
+const referralServices = [...SERVICES_LIST.map((service) => service.title), ...AGENCY_SERVICES, 'No estoy seguro'];
+
+const fieldClass = 'mt-2 min-h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-white outline-none transition placeholder:text-zinc-600 focus:border-amber-200/60';
+
+function NewReferralDialog({ onClose }: { onClose: () => void }) {
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitted(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="new-referral-title" className="my-auto w-full max-w-lg rounded-lg border border-white/10 bg-[#111114] p-6 shadow-2xl sm:p-8">
+        <div className="flex items-start justify-between gap-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-200">Nuevo referido</p>
+            <h2 id="new-referral-title" className="mt-2 font-display text-2xl font-semibold text-white">
+              {submitted ? 'Simulación completada.' : 'Registrar nuevo referido'}
+            </h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Cerrar formulario" className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {submitted ? (
+          <div className="mt-7 border-t border-white/10 pt-6">
+            <p className="inline-flex rounded-full border border-amber-200/20 bg-amber-200/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-100">Simulación · demostración</p>
+            <div className="mt-4 flex gap-3 text-sm leading-6 text-zinc-300">
+              <Check className="mt-1 h-5 w-5 shrink-0 text-emerald-300" />
+              <p>En el producto final, Charlitron recibiría este referido y le daría seguimiento.</p>
+            </div>
+            <p className="mt-5 text-xs leading-5 text-zinc-500">Prototipo visual: la información ingresada no se envía, no se guarda y no aparece en la lista.</p>
+            <button type="button" onClick={onClose} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200">
+              Entendido <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4 border-t border-white/10 pt-6">
+            <label className="block text-sm text-zinc-300">
+              Nombre del negocio
+              <input required className={fieldClass} placeholder="Ej. Negocio de ejemplo" />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm text-zinc-300">
+                Nombre del contacto
+                <input required autoComplete="off" className={fieldClass} placeholder="Nombre ficticio" />
+              </label>
+              <label className="block text-sm text-zinc-300">
+                WhatsApp o teléfono
+                <input required type="tel" inputMode="tel" pattern="[0-9+()\s\-]{10,}" title="Escribe al menos 10 dígitos" autoComplete="off" className={fieldClass} placeholder="444 000 0000" />
+              </label>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm text-zinc-300">
+                Correo <span className="text-zinc-600">(opcional)</span>
+                <input type="email" autoComplete="off" className={fieldClass} placeholder="contacto@ejemplo.com" />
+              </label>
+              <label className="block text-sm text-zinc-300">
+                Ciudad
+                <input required className={fieldClass} placeholder="Ej. San Luis Potosí" />
+              </label>
+            </div>
+            <label className="block text-sm text-zinc-300">
+              Servicio que necesita
+              <select required defaultValue="" className={fieldClass}>
+                <option value="" disabled>Selecciona un servicio</option>
+                {referralServices.map((service) => <option key={service} value={service}>{service}</option>)}
+              </select>
+            </label>
+            <label className="block text-sm text-zinc-300">
+              Comentario <span className="text-zinc-600">(opcional)</span>
+              <textarea rows={3} className={`${fieldClass} py-2`} placeholder="Contexto que ayude a Charlitron" />
+            </label>
+            <label className="flex items-start gap-3 pt-1 text-xs leading-5 text-zinc-400">
+              <input required type="checkbox" className="mt-1 accent-amber-300" />
+              Confirmo que cuento con autorización de esta persona para compartir sus datos de contacto con Charlitron.
+            </label>
+            <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
+              Registrar referido <ArrowRight className="h-4 w-4" />
+            </button>
+            <p className="text-center text-[11px] leading-5 text-zinc-600">Demostración: usa datos ficticios. Ningún dato se transmite ni se almacena.</p>
+          </form>
+        )}
+      </section>
     </div>
   );
 }
