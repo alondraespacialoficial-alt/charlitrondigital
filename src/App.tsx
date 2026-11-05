@@ -8,6 +8,7 @@ import { AgencyHubPage } from './features/btl/AgencyHubPage';
 import { BtlServicePage } from './features/btl/BtlServicePage';
 import { BtlCasesPage } from './features/btl/BtlCasesPage';
 import { ProjectRoute } from './features/projects/ProjectPage';
+import { AliadosApp } from './features/aliados/AliadosApp';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/blog" element={<BlogListPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="/admin" element={<AdminApp />} />
+        <Route path="/aliados/*" element={<AliadosApp />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

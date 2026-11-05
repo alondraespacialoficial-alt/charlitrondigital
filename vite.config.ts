@@ -1,7 +1,11 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, loadEnv} from 'vite';
+import {
+  aliadosSupabaseBuildConfig,
+  aliadosSupabaseWasIgnored,
+} from './scripts/aliadosSupabasePolicy.ts';
 import {
   isPortfolioPreviewEnvironment,
   isPortfolioPublicMediaEnabled,
@@ -12,11 +16,19 @@ import {
 
 const isolatePortfolioPreview = isPortfolioPreviewEnvironment(process.env);
 
-export default defineConfig(() => {
+export default defineConfig(({mode}) => {
+  // Las variables ALIADOS_* no llevan prefijo VITE_: solo entran al bundle por la politica de aliadosSupabasePolicy.
+  const aliadosEnv = {...loadEnv(mode, process.cwd(), ''), ...process.env};
+  if (aliadosSupabaseWasIgnored(aliadosEnv)) {
+    console.warn('[aliados] ALIADOS_SUPABASE_* definidas, pero este entorno no es Production ni Preview de feat/aliados-charlitron: se ignoran.');
+  }
+  const aliadosAuth = aliadosSupabaseBuildConfig(aliadosEnv);
   return {
     plugins: [react(), tailwindcss()],
     envPrefix: isolatePortfolioPreview ? [] : 'VITE_',
     define: {
+      __ALIADOS_SUPABASE_URL__: JSON.stringify(aliadosAuth.url),
+      __ALIADOS_SUPABASE_ANON_KEY__: JSON.stringify(aliadosAuth.anonKey),
       __PORTFOLIO_PUBLIC_MEDIA_ENABLED__: JSON.stringify(
         isPortfolioPublicMediaEnabled(process.env),
       ),
