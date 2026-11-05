@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, lazy, Suspense, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowDownRight,
@@ -23,6 +23,9 @@ import { CharlitronLogo } from '../../components/CharlitronLogo';
 import { applyPageMeta } from '../../lib/seo';
 
 type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
+
+// Carga diferida: el panel administrador no viaja en el código del área del aliado.
+const AliadosAdminPrototype = lazy(() => import('./AliadosAdminPrototype'));
 
 const ROUTE_META_SELECTORS = [
   'meta[name="description"]',
@@ -59,13 +62,16 @@ function useAliadosMeta(path: string) {
     const previousJsonLd = document.getElementById('charlitron-jsonld-page')?.cloneNode(true);
     const isPublicPage = path === '/aliados';
     const isTermsPage = path === '/aliados/terminos';
+    const isAdminPage = path === '/aliados/admin';
 
     applyPageMeta({
       title: isPublicPage
         ? 'Aliados Charlitron | Recomienda oportunidades de negocio'
         : isTermsPage
           ? 'Términos del Programa Aliados (borrador) | Charlitron Digital'
-          : 'Acceso de aliados | Charlitron Digital',
+          : isAdminPage
+            ? 'Panel administrador (prototipo) | Charlitron Digital'
+            : 'Acceso de aliados | Charlitron Digital',
       description: isPublicPage
         ? 'Recomienda negocios a Charlitron y recibe una comisión según el acuerdo cuando el proyecto se concrete y se cobre.'
         : isTermsPage
@@ -141,6 +147,13 @@ export function AliadosApp() {
 
   if (path === '/aliados') return <AlliesLanding />;
   if (path === '/aliados/terminos') return <AllyTermsPage />;
+  if (path === '/aliados/admin') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#09090b]" />}>
+        <AliadosAdminPrototype />
+      </Suspense>
+    );
+  }
   if (path === '/aliados/ingresar') return <PartnerLogin onLogin={() => {
     setDemoSignedIn(true);
     navigate('/aliados/panel');
