@@ -137,6 +137,44 @@ function ReasonAction({ label, confirmLabel, busy, onConfirm }: { label: string;
   );
 }
 
+// Accion que pide confirmacion antes de ejecutarse.
+function ConfirmAction({ label, question, confirmLabel, busy, primary, onConfirm }: {
+  label: string;
+  question: string;
+  confirmLabel: string;
+  busy: boolean;
+  primary?: boolean;
+  onConfirm: () => Promise<boolean>;
+}) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) {
+    return <button type="button" disabled={busy} className={primary ? primaryButton : ghostButton} onClick={() => setAsking(true)}>{label}</button>;
+  }
+  return (
+    <div role="group" aria-label={question} className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-slate-200">{question}</span>
+      <button
+        type="button"
+        disabled={busy}
+        className={primaryButton}
+        onClick={async () => {
+          await onConfirm();
+          setAsking(false);
+        }}
+      >
+        {confirmLabel}
+      </button>
+      <button type="button" className={ghostButton} onClick={() => setAsking(false)}>Cancelar</button>
+    </div>
+  );
+}
+
+const ALLY_STATUS_ACTIONS: Record<string, { label: string; confirmLabel: string; target: 'active' | 'paused'; verb: string; done: string; primary: boolean } | undefined> = {
+  pending: { label: 'Aprobar', confirmLabel: 'Sí, aprobar', target: 'active', verb: 'Aprobar', done: 'aprobado. Ya puede entrar a su panel', primary: true },
+  active: { label: 'Pausar', confirmLabel: 'Sí, pausar', target: 'paused', verb: 'Pausar', done: 'pausado. Ya no puede entrar ni registrar referidos', primary: false },
+  paused: { label: 'Reactivar', confirmLabel: 'Sí, reactivar', target: 'active', verb: 'Reactivar', done: 'reactivado. Vuelve a tener acceso', primary: true },
+};
+
 function MoneyForm({
   busy,
   submitLabel,
@@ -250,12 +288,28 @@ export function AlliesSection({ data, repo, run, busy }: SectionProps) {
         ) : (
           <div className="space-y-2">
             {data.allies.map((ally) => (
-              <div key={ally.user_id} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 pb-2">
+              <div key={ally.user_id} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-100">{ally.display_name}</p>
                   <p className="text-xs text-slate-400">{ally.email}{ally.city ? ` · ${ally.city}` : ''}</p>
                 </div>
-                <Badge status={ally.status} />
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge status={ally.status} />
+                  {(() => {
+                    const action = ALLY_STATUS_ACTIONS[ally.status];
+                    if (!action) return null;
+                    return (
+                      <ConfirmAction
+                        label={action.label}
+                        question={`¿${action.verb} a ${ally.display_name}?`}
+                        confirmLabel={action.confirmLabel}
+                        busy={busy}
+                        primary={action.primary}
+                        onConfirm={() => run(() => repo.setAllyStatus(ally.user_id, action.target), `${ally.display_name} ${action.done}.`)}
+                      />
+                    );
+                  })()}
+                </div>
               </div>
             ))}
           </div>

@@ -58,6 +58,7 @@ test('toda escritura es una funcion de la base; ninguna toca tablas', async () =
   const { repo, calls } = mockClient();
   await repo.submitReferral({ name: 'Cliente', phone: '4440000000', authorized: true });
   await repo.rejectRegistration('r', 'motivo');
+  await repo.setAllyStatus('u', 'paused');
   await repo.setReferralStatus('r', 'duplicate', 'nota', 'orig');
   await repo.recordSale('r', 1000, 'desc', 'nota');
   await repo.correctSale('s', 900, 'motivo');
@@ -69,7 +70,7 @@ test('toda escritura es una funcion de la base; ninguna toca tablas', async () =
   await repo.reverseCommissionPayment('cp', 'motivo');
   assert.equal(calls.some((call) => call.kind === 'from'), false);
   assert.deepEqual(calls.map((call) => call.name), [
-    'submit_referral', 'admin_reject_registration', 'admin_set_referral_status', 'admin_record_sale', 'admin_correct_sale',
+    'submit_referral', 'admin_reject_registration', 'admin_set_ally_status', 'admin_set_referral_status', 'admin_record_sale', 'admin_correct_sale',
     'admin_record_payment', 'admin_reverse_payment', 'admin_assign_commission', 'admin_authorize_commission',
     'admin_pay_commission', 'admin_reverse_commission_payment',
   ]);

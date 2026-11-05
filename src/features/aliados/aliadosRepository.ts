@@ -222,6 +222,11 @@ export class AliadosRepository {
     }
   }
 
+  // Aprobar (pending -> active), pausar (active -> paused) o reactivar (paused -> active). Solo por funcion segura.
+  setAllyStatus(userId: string, status: 'active' | 'paused') {
+    return call<void>(this.client.rpc('admin_set_ally_status', { p_user_id: userId, p_status: status }));
+  }
+
   rejectRegistration(registrationId: string, reason: string) {
     return call<void>(this.client.rpc('admin_reject_registration', { p_registration_id: registrationId, p_reason: reason }));
   }

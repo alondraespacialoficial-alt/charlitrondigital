@@ -17,10 +17,10 @@ BEGIN
   PERFORM harness.put('admin', v_admin);
   PERFORM harness.put('ally1', v_ally);
   PERFORM harness.as_user(v_admin);
-  UPDATE public.ally_profiles SET status = 'active' WHERE user_id = v_ally;
+  PERFORM public.admin_set_ally_status(v_ally, 'active');
   RESET ROLE;
   PERFORM harness.must((SELECT status = 'active' AND approved_by = v_admin FROM public.ally_profiles WHERE user_id = v_ally),
-    'aliado 1 activado por el administrador (flujo de 0001)');
+    'aliado 1 activado por el administrador (admin_set_ally_status sobre el trigger de 0001)');
 END $$;
 
 -- 2. Registro cerrado por defecto: nada se guarda ni se expone.
@@ -169,14 +169,14 @@ BEGIN
 
   -- Acceso segun estado: pausado no opera ni lee.
   PERFORM harness.as_user(harness.id('admin'));
-  UPDATE public.ally_profiles SET status = 'paused' WHERE user_id = harness.id('ally2');
+  PERFORM public.admin_set_ally_status(harness.id('ally2'), 'paused');
   RESET ROLE;
   PERFORM harness.as_user(harness.id('ally2'));
   PERFORM harness.expect_error($q$SELECT public.submit_referral('Pausado','p@ejemplo.com',NULL,NULL,NULL,true)$q$, '42501');
   PERFORM harness.must((SELECT count(*) FROM public.ally_my_referrals) = 0, 'aliado pausado no lee datos');
   RESET ROLE;
   PERFORM harness.as_user(harness.id('admin'));
-  UPDATE public.ally_profiles SET status = 'active' WHERE user_id = harness.id('ally2');
+  PERFORM public.admin_set_ally_status(harness.id('ally2'), 'active');
   RESET ROLE;
 END $$;
 
@@ -349,13 +349,13 @@ DECLARE
   v_expected text[] := ARRAY['admin_assign_commission', 'admin_authorize_commission', 'admin_correct_sale',
     'admin_finalize_registration', 'admin_pay_commission', 'admin_record_payment', 'admin_record_sale',
     'admin_registration_for_approval', 'admin_reject_registration', 'admin_reverse_commission_payment',
-    'admin_reverse_payment', 'admin_set_referral_status', 'submit_ally_registration', 'submit_referral'];
+    'admin_reverse_payment', 'admin_set_ally_status', 'admin_set_referral_status', 'submit_ally_registration', 'submit_referral'];
 BEGIN
   PERFORM harness.must((SELECT array_agg(p.proname::text ORDER BY p.proname::text COLLATE "C")
                         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                         WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)'
                           AND has_function_privilege('authenticated', p.oid, 'EXECUTE')) = v_expected,
-    'authenticated ejecuta exactamente las 14 funciones publicas; ningun ayudante interno');
+    'authenticated ejecuta exactamente las 15 funciones publicas; ningun ayudante interno');
   PERFORM harness.must((SELECT array_agg(p.proname::text) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                         WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)'
                           AND has_function_privilege('anon', p.oid, 'EXECUTE')) = ARRAY['submit_ally_registration'],
@@ -431,4 +431,81 @@ BEGIN
   RESET ROLE;
   PERFORM harness.put('pb4', v_pb);
   PERFORM harness.put('c4', v_c);
+END $$;
+
+-- 11. admin_set_ally_status: aprobar / pausar / reactivar, solo por funcion segura, sin tocar Auth ni roles.
+DO $$
+DECLARE
+  v_user uuid;
+  v_roles_before int := (SELECT count(*) FROM public.account_roles);
+  v_auth_before int := (SELECT count(*) FROM auth.users);
+BEGIN
+  -- Aliado pendiente (como Integrando): ya existe en Auth, con rol y perfil pending.
+  INSERT INTO auth.users (email) VALUES ('pendiente@test.local') RETURNING id INTO v_user;
+  INSERT INTO public.account_roles (user_id, role) VALUES (v_user, 'ally');
+  INSERT INTO public.ally_profiles (user_id, display_name) VALUES (v_user, 'Aliado Pendiente');
+  PERFORM harness.put('pend', v_user);
+  v_roles_before := v_roles_before + 1;
+  v_auth_before := v_auth_before + 1;
+
+  -- Accesos indebidos.
+  PERFORM harness.as_anon();
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', v_user, 'active'), '42501');
+  RESET ROLE;
+  PERFORM harness.as_user(harness.id('ally1'));
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', v_user, 'active'), '42501');
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', harness.id('ally1'), 'paused'), '42501');
+  PERFORM harness.expect_error(format($q$UPDATE public.ally_profiles SET status = 'active' WHERE user_id = %L$q$, v_user), '42501');
+  RESET ROLE;
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM harness.expect_error(format($q$UPDATE public.ally_profiles SET status = 'active' WHERE user_id = %L$q$, v_user), '42501');
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', v_user, 'pending'), '23514');
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', v_user, 'cualquiera'), '23514');
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', gen_random_uuid(), 'active'), 'P0002');
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, NULL)', v_user), '23514');
+  RESET ROLE;
+  PERFORM harness.must((SELECT status = 'pending' AND approved_at IS NULL FROM public.ally_profiles WHERE user_id = v_user),
+    'los intentos indebidos no cambiaron el estado pendiente');
+
+  -- Aprobar (pending -> active): el trigger de 0001 registra aprobador y fecha.
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM harness.must((SELECT status = 'pending' FROM public.admin_allies WHERE user_id = v_user), 'el admin ve al aliado pendiente');
+  PERFORM public.admin_set_ally_status(v_user, 'active');
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', v_user, 'active'), '23514');
+  PERFORM harness.must((SELECT status = 'active' FROM public.admin_allies WHERE user_id = v_user), 'la vista admin_allies refleja active');
+  RESET ROLE;
+  PERFORM harness.must((SELECT status = 'active' AND approved_by = harness.id('admin') AND approved_at IS NOT NULL
+                               AND status_changed_by = harness.id('admin') FROM public.ally_profiles WHERE user_id = v_user),
+    'aprobacion registrada con aprobador y fecha por el trigger de 0001');
+
+  -- El aliado aprobado ya opera; pausado deja de leer y de registrar; reactivado vuelve.
+  PERFORM harness.as_user(v_user);
+  PERFORM public.submit_referral('Cliente Del Nuevo', 'delnuevo@ejemplo.com', NULL, NULL, NULL, true);
+  RESET ROLE;
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM public.admin_set_ally_status(v_user, 'paused');
+  RESET ROLE;
+  PERFORM harness.as_user(v_user);
+  PERFORM harness.expect_error($q$SELECT public.submit_referral('Pausado','otro@ejemplo.com',NULL,NULL,NULL,true)$q$, '42501');
+  PERFORM harness.must((SELECT count(*) FROM public.ally_my_referrals) = 0, 'aliado pausado no lee sus datos');
+  RESET ROLE;
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM harness.expect_error(format('SELECT public.admin_set_ally_status(%L, %L)', v_user, 'paused'), '23514');
+  PERFORM public.admin_set_ally_status(v_user, 'active');
+  RESET ROLE;
+  PERFORM harness.as_user(v_user);
+  PERFORM harness.must((SELECT count(*) FROM public.ally_my_referrals) = 1, 'aliado reactivado vuelve a leer sus datos');
+  RESET ROLE;
+
+  -- Nada de Auth ni de roles cambio; la huella de 0001 sigue intacta.
+  PERFORM harness.must((SELECT count(*) FROM public.account_roles) = v_roles_before
+                       AND (SELECT count(*) FROM auth.users) = v_auth_before
+                       AND NOT EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = v_user),
+    'admin_set_ally_status no creo cuentas ni roles ni administradores');
+  PERFORM harness.must((SELECT fp FROM harness.fingerprint) = harness.compute_fp(), 'huellas de 0001/plataforma intactas tras 0003');
+  PERFORM harness.must((SELECT array_agg(p.proname::text ORDER BY p.proname::text COLLATE "C") FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                        WHERE n.nspname = 'public' AND p.proname ~ '^(admin_|aliados_|submit_)' AND has_function_privilege('anon', p.oid, 'EXECUTE'))
+                       = ARRAY['submit_ally_registration'], 'anon sigue ejecutando solo submit_ally_registration');
+  PERFORM harness.must(NOT has_any_column_privilege('authenticated', 'public.ally_profiles', 'UPDATE'),
+    'authenticated no tiene UPDATE directo sobre ally_profiles');
 END $$;

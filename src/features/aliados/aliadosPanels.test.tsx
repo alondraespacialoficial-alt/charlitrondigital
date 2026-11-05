@@ -42,6 +42,19 @@ test('Aliados: solicitud pendiente con aprobar/rechazar y aliados con su estado'
   assert.match(html, /Activo/);
 });
 
+test('Aliados: Aprobar a pendientes, Pausar a activos y Reactivar a pausados', () => {
+  const allies = [
+    { user_id: 'p', display_name: 'Aliado Pendiente', email: 'p@x.co', status: 'pending' as const, created_at: '2026-10-01' },
+    { user_id: 'a', display_name: 'Aliado Activo', email: 'a@x.co', status: 'active' as const, created_at: '2026-10-01' },
+    { user_id: 'z', display_name: 'Aliado Pausado', email: 'z@x.co', status: 'paused' as const, created_at: '2026-10-01' },
+  ];
+  const html = renderToStaticMarkup(createElement(AlliesSection, { ...props, data: { ...data, allies } }));
+  assert.equal((html.match(/>Aprobar</g) ?? []).length, 1);
+  assert.equal((html.match(/>Pausar</g) ?? []).length, 1);
+  assert.equal((html.match(/>Reactivar</g) ?? []).length, 1);
+  assert.equal(/Sí, aprobar|Sí, pausar|Sí, reactivar/.test(html), false, 'la confirmacion aparece solo tras pulsar');
+});
+
 test('Referidos: estado, notas internas, duplicado y registrar venta', () => {
   const html = renderToStaticMarkup(createElement(ReferralsSection, props));
   assert.match(html, /Cliente Uno/);
