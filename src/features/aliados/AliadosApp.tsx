@@ -20,7 +20,6 @@ import {
   X,
 } from 'lucide-react';
 import { CharlitronLogo } from '../../components/CharlitronLogo';
-import { AGENCY_SERVICES, SERVICES_LIST } from '../../data/content';
 import { applyPageMeta } from '../../lib/seo';
 
 type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
@@ -544,9 +543,26 @@ function SummaryMetric({ label, value, hint, icon: Icon }: { label: string; valu
   );
 }
 
-const referralServices = [...SERVICES_LIST.map((service) => service.title), ...AGENCY_SERVICES, 'No estoy seguro'];
+const referralServices = [
+  'Páginas web',
+  'Apps y sistemas',
+  'Automatización e IA',
+  'Perifoneo',
+  'Volanteo',
+  'Activaciones BTL',
+  'Promotores y demostradoras',
+  'Eventos',
+  'Producción audiovisual',
+  'No estoy seguro',
+];
+
+const referralRelations = ['Cliente conocido', 'Amigo o familiar', 'Contacto profesional', 'Negocio que visité', 'Otro'];
 
 const fieldClass = 'mt-2 min-h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-white outline-none transition placeholder:text-zinc-600 focus:border-amber-200/60';
+
+// Fondo y texto explícitos (también en <option>) para legibilidad en Chrome, Edge y móviles.
+const selectClass = 'mt-2 min-h-11 w-full rounded-md border border-white/10 bg-[#0b0b0d] px-3 text-zinc-100 outline-none transition [color-scheme:dark] focus:border-amber-200/60';
+const optionClass = 'bg-[#0b0b0d] text-zinc-100';
 
 function NewReferralDialog({ onClose }: { onClose: () => void }) {
   const [submitted, setSubmitted] = useState(false);
@@ -613,9 +629,16 @@ function NewReferralDialog({ onClose }: { onClose: () => void }) {
             </div>
             <label className="block text-sm text-zinc-300">
               Servicio que necesita
-              <select required defaultValue="" className={fieldClass}>
-                <option value="" disabled>Selecciona un servicio</option>
-                {referralServices.map((service) => <option key={service} value={service}>{service}</option>)}
+              <select required defaultValue="" className={selectClass}>
+                <option value="" disabled className={optionClass}>Selecciona un servicio</option>
+                {referralServices.map((service) => <option key={service} value={service} className={optionClass}>{service}</option>)}
+              </select>
+            </label>
+            <label className="block text-sm text-zinc-300">
+              ¿Cómo conoces al prospecto? <span className="text-zinc-600">(opcional)</span>
+              <select defaultValue="" className={selectClass}>
+                <option value="" className={optionClass}>Selecciona una opción</option>
+                {referralRelations.map((relation) => <option key={relation} value={relation} className={optionClass}>{relation}</option>)}
               </select>
             </label>
             <label className="block text-sm text-zinc-300">
