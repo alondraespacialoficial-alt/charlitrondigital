@@ -20,8 +20,8 @@ Los textos publicados viven en el código y son la fuente única; este documento
 - **Responsable legal y titular fiscal**: Carlos Leonardo Álvarez Cedillo, persona física, con su consentimiento. Sustituye a la identificación anterior ("José Adrián Álvarez Carlos y/o Charlitron Digital S.A. de C.V."), que se retiró del aviso general y del borrador de Aliados.
 - **Administrador de Aliados Charlitron**: José Adrián Álvarez Carlos, director comercial. Figura solo con ese rol en el aviso y los términos de Aliados.
 - **Contacto propuesto** (privacidad, ARCO y dudas legales): `nadrian18@gmail.com`, tomado de `CONTACT_EMAIL`. Se eliminaron `privacidad@charlitrondigital.com` y `aliados@charlitron.com`, que no estaban confirmados.
-- **Domicilio fiscal**: se mostrará en los avisos (art. 16 LFPDPPP) y en ningún otro lugar. **Aún no está capturado**: mientras `LEGAL_FISCAL_ADDRESS` sea `null` los textos muestran solo "San Luis Potosí, S.L.P., México" y el aviso de Aliados indica "domicilio fiscal por confirmar".
-- **No se publican** CURP, idCIF, RFC ni documentos fiscales; una prueba lo verifica.
+- **Domicilio fiscal**: Calle Lanzagorta 330, colonia San Sebastián, C.P. 78349, San Luis Potosí, San Luis Potosí, México (tomado de la Constancia de Situación Fiscal). Está capturado en `LEGAL_FISCAL_ADDRESS`, pero **no se publica** hasta contar con la autorización expresa de Carlos Leonardo Álvarez Cedillo para usarlo como domicilio del responsable del tratamiento (art. 16 LFPDPPP). Mientras `LEGAL_ADDRESS_PUBLICATION_AUTHORIZED` sea `false`, los textos muestran solo "San Luis Potosí, S.L.P., México" y el aviso de Aliados indica "domicilio fiscal por confirmar". Aprobar los textos exige activar esa llave.
+- **No se incorporan** CURP, RFC, idCIF ni copias de la constancia; una prueba lo verifica.
 
 No se modificaron créditos de autoría ni los pies de página con la marca "Charlitron Digital" (son marca, no identificación del responsable).
 
@@ -35,7 +35,7 @@ No se modificaron créditos de autoría ni los pies de página con la marca "Cha
 | Tema | Antes | Ahora |
 | --- | --- | --- |
 | Responsable | José Adrián "y/o" S.A. de C.V.; contactos de dominios distintos | Carlos Leonardo Álvarez Cedillo; un solo contacto |
-| Conservación de solicitudes rechazadas | "Se eliminan a los 7 días" | Se conservan al menos 30 días (enfriamiento anti-abuso de la migración 0004); no se promete eliminación |
+| Conservación de solicitudes rechazadas | "Se eliminan a los 7 días" | Se conservan mientras no se defina un plazo de eliminación. Los 30 días son solo el enfriamiento antes de aceptar otra solicitud del mismo correo (migración 0004), no el plazo de conservación. No se promete eliminación automática porque no está implementada |
 | Cancelación vs. auditoría | "Auditoría permanente" junto con derecho de cancelación | Se declara que ventas, cobros, comisiones y auditoría no se eliminan por diseño; el alcance de la cancelación queda pendiente |
 | Datos de referidos | "Son propiedad de Charlitron" | Son datos de terceros; el aliado declara su autorización (la plataforma la exige); finalidades propias y sin compartirse con otros aliados |
 | Autorización de datos | "Autorizo procesar y *compartir* mis datos" | "Tratar" mis datos para las finalidades del aliado; no se comparten con terceros |
@@ -49,11 +49,11 @@ No se modificaron créditos de autoría ni los pies de página con la marca "Cha
 
 Lista completa y vigente en `LEGAL_PENDING`. Resumen:
 
-1. Domicilio fiscal del responsable y constancia escrita de su designación.
+1. Autorización expresa para publicar el domicilio fiscal como domicilio del responsable, y constancia escrita de su designación.
 2. Relación de José Adrián con el tratamiento (personal del responsable o encargado).
 3. Confirmar el canal oficial de privacidad (el correo propuesto es el del administrador del programa).
 4. Procedimiento, medio y plazos ARCO; revocación del consentimiento; derechos adicionales.
-5. **Retención**: plazos definitivos; hoy no existe proceso de eliminación.
+5. **Retención**: plazos definitivos y mecanismo de eliminación; hoy no existe proceso de eliminación y no debe prometerse eliminación automática hasta implementarla.
 6. Cancelación frente a registros inmutables (ventas, comisiones, cobros y auditoría).
 7. **Transferencias y encargados**: Supabase y Vercel, posible tratamiento fuera de México.
 8. Cómo se informa a las personas recomendadas al ser contactadas.
@@ -67,7 +67,7 @@ Lista completa y vigente en `LEGAL_PENDING`. Resumen:
 
 Requiere **ambas** llaves; ninguna está abierta:
 
-1. `ALIADOS_LEGAL_APPROVED = true` en `aliadosLegal.ts` (solo con `LEGAL_PENDING` vacío; una prueba lo exige).
+1. `ALIADOS_LEGAL_APPROVED = true` en `aliadosLegal.ts` (solo con `LEGAL_PENDING` vacío y `LEGAL_ADDRESS_PUBLICATION_AUTHORIZED = true`; una prueba lo exige).
 2. `aliados_settings.registration_open = true` en la base, con la migración `aliados-lab-0004-registration.sql` instalada.
 
 Además: configurar en el Supabase de Aliados las Redirect URLs (`/aliados/activar`), SMTP propio y la vigencia de las invitaciones, y probar una invitación real.

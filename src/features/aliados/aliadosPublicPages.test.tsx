@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { AlliesLanding } from './AllyLanding';
 import { AllyActivationPage, AllyLegalPage, AllyRegistrationForm, AllyRegistrationPage } from './AllyPublicPages';
 import { LegalPage } from '../../components/LegalPage';
-import { LEGAL_FISCAL_ADDRESS, LEGAL_RESPONSIBLE_NAME } from '../../data/legalEntity';
+import { LEGAL_ADDRESS_PUBLICATION_AUTHORIZED, LEGAL_FISCAL_ADDRESS, LEGAL_RESPONSIBLE_NAME } from '../../data/legalEntity';
 import { CONTACT_EMAIL } from '../../data/content';
 import { ALIADOS_LEGAL_APPROVED, LEGAL_PENDING, PRIVACY_SECTIONS, TERMS_SECTIONS } from './aliadosLegal';
 
@@ -37,14 +37,17 @@ test('sin conexion confirmada con la base la pagina de registro NO ofrece el for
 
 test('mientras falten datos legales el registro sigue cerrado por codigo', () => {
   assert.ok(LEGAL_PENDING.length > 0);
-  if (ALIADOS_LEGAL_APPROVED) assert.equal(LEGAL_PENDING.length, 0, 'no se puede aprobar el texto con datos legales pendientes');
+  if (ALIADOS_LEGAL_APPROVED) {
+    assert.equal(LEGAL_PENDING.length, 0, 'no se puede aprobar el texto con datos legales pendientes');
+    assert.ok(LEGAL_ADDRESS_PUBLICATION_AUTHORIZED, 'no se puede aprobar sin autorizacion para publicar el domicilio');
+  }
 });
 
 test('los textos legales cubren lo esencial y no inventan datos del responsable', () => {
   const text = JSON.stringify([...PRIVACY_SECTIONS, ...TERMS_SECTIONS]);
   for (const topic of ['Responsable', 'Datos que recabamos', 'ARCO', 'Consentimiento', 'Conservación']) assert.match(text, new RegExp(topic));
   for (const topic of ['Registro y aprobación', 'Ventas y comisiones', 'Conducta del aliado', 'Cambios y baja']) assert.match(text, new RegExp(topic));
-  assert.equal(/RFC|CURP|idCIF|\bCP\b|calle|S\.A\. de C\.V\.|aliados@charlitron\.com|privacidad@charlitrondigital\.com/i.test(text), false);
+  assert.equal(/RFC|CURP|idCIF|S\.A\. de C\.V\.|aliados@charlitron\.com|privacidad@charlitrondigital\.com/i.test(text), false);
 
   const privacy = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(AllyLegalPage, { kind: 'privacy' })));
   const terms = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(AllyLegalPage, { kind: 'terms' })));
@@ -95,13 +98,20 @@ test('un solo correo de contacto y ninguno ficticio o sin confirmar', () => {
   assert.deepEqual([...emails], [CONTACT_EMAIL]);
 });
 
-test('no se publican CURP, idCIF ni RFC, y el domicilio fiscal pendiente consta en la lista de pendientes', () => {
+test('el domicilio fiscal se publica solo con autorizacion expresa y nunca junto a CURP, idCIF ni RFC', () => {
   const text = ALL_LEGAL_TEXT();
   assert.equal(/\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b/.test(text), false, 'CURP');
   assert.equal(/\b[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}\b/.test(text), false, 'RFC');
-  assert.equal(/idCIF/i.test(text), false);
-  if (LEGAL_FISCAL_ADDRESS === null) assert.ok(LEGAL_PENDING.some((item) => /Domicilio fiscal/.test(item)));
-  else assert.equal(/CURP|idCIF|RFC/i.test(LEGAL_FISCAL_ADDRESS), false);
+  assert.equal(/idCIF|constancia de situaci/i.test(text), false);
+  assert.match(LEGAL_FISCAL_ADDRESS ?? '', /Lanzagorta 330, colonia San Sebastián, C\.P\. 78349, San Luis Potosí/);
+  assert.equal(/CURP|idCIF|RFC/i.test(LEGAL_FISCAL_ADDRESS ?? ''), false);
+  assert.ok(LEGAL_PENDING.some((item) => /Autorización expresa .* domicilio fiscal/.test(item)));
+  if (LEGAL_ADDRESS_PUBLICATION_AUTHORIZED) {
+    assert.match(text, /Lanzagorta 330/);
+  } else {
+    assert.equal(/Lanzagorta|78349|San Sebasti/.test(text), false, 'el domicilio no se muestra sin autorizacion');
+    assert.match(text, /domicilio fiscal por confirmar/);
+  }
 });
 
 test('los tratamientos del aviso general y del aviso de Aliados permanecen separados', () => {
@@ -122,8 +132,11 @@ test('las comisiones son montos acordados por proyecto: sin porcentajes fijos ni
 
 test('conservacion y datos de referidos describen el comportamiento real y dejan pendiente lo no validado', () => {
   const privacy = JSON.stringify(PRIVACY_SECTIONS);
-  assert.match(privacy, /rechazadas se conservan al menos 30 días/);
+  assert.match(privacy, /rechazadas se conservan mientras no se defina su plazo de eliminación/);
+  assert.match(privacy, /no el plazo de conservación/);
   assert.equal(/7 días/.test(privacy), false);
+  assert.equal(/se eliminar(á|an)|eliminaremos|se borra|eliminación automática|a los \d+ días se/i.test(JSON.stringify([...PRIVACY_SECTIONS, ...TERMS_SECTIONS])), false, 'no se promete eliminacion automatica');
+  assert.ok(LEGAL_PENDING.some((item) => /no debe prometerse eliminación automática/.test(item)));
   assert.match(privacy, /no se eliminan por su naturaleza contable/);
   assert.equal(/propiedad de Charlitron/i.test(JSON.stringify([...PRIVACY_SECTIONS, ...TERMS_SECTIONS])), false);
   for (const topic of [/Transferencias/, /ARCO/, /Conservación/, /Documentación fiscal/]) {

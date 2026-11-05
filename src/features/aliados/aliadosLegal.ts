@@ -3,7 +3,7 @@ import {
   ALIADOS_ADMIN_NAME,
   ALIADOS_ADMIN_ROLE,
   LEGAL_ADDRESS_LINE,
-  LEGAL_FISCAL_ADDRESS,
+  LEGAL_ADDRESS_PUBLICATION_AUTHORIZED,
   LEGAL_RESPONSIBLE_NAME,
   LEGAL_RESPONSIBLE_ROLE,
 } from '../../data/legalEntity';
@@ -16,12 +16,12 @@ export const ALIADOS_PRIVACY_CONTACT = CONTACT_EMAIL;
 
 // Puntos que requieren revision juridica o datos que aun no constan. No deben resolverse por suposicion.
 export const LEGAL_PENDING: readonly string[] = [
-  'Domicilio fiscal de Carlos Leonardo Álvarez Cedillo: aún no está capturado (LEGAL_FISCAL_ADDRESS en src/data/legalEntity.ts). Se necesita en el aviso general y en el de Aliados; no publicar CURP, idCIF, RFC ni documentos fiscales.',
+  'Autorización expresa de Carlos Leonardo Álvarez Cedillo para publicar su domicilio fiscal como domicilio del responsable del tratamiento. El domicilio ya está capturado en src/data/legalEntity.ts pero no se muestra hasta activar LEGAL_ADDRESS_PUBLICATION_AUTHORIZED. No publicar CURP, RFC, idCIF ni copias de la constancia.',
   'Constancia escrita de la designación de Carlos Leonardo Álvarez Cedillo como titular fiscal y responsable legal, y de su aceptación.',
   'Relación de José Adrián Álvarez Carlos con el tratamiento de datos (administra el programa): confirmar si actúa como personal del responsable o como encargado, y ajustar la redacción.',
   'Canal de privacidad y ARCO: nadrian18@gmail.com es el correo propuesto; confirmar que es el canal oficial del responsable, ya que corresponde al administrador del programa.',
   'Procedimiento, medio y plazos para ejercer derechos ARCO y revocar el consentimiento; alcance de derechos adicionales (portabilidad, limitación) que mencionaba el borrador anterior.',
-  'Conservación: plazos definitivos. Hoy el sistema conserva las solicitudes rechazadas al menos 30 días (enfriamiento anti-abuso) y no tiene proceso de eliminación; los plazos propuestos para aliados (vigencia + 3 años) y recomendaciones (vigencia + 1 año) no están validados.',
+  'Conservación: plazos definitivos y mecanismo de eliminación. Hoy el sistema no elimina nada automáticamente: las solicitudes rechazadas se conservan sin plazo definido (los 30 días son solo el enfriamiento antes de aceptar una nueva solicitud del mismo correo). Los plazos propuestos para aliados (vigencia + 3 años) y recomendaciones (vigencia + 1 año) no están validados, y no debe prometerse eliminación automática hasta implementarla.',
   'Cancelación frente a registros inmutables: ventas, comisiones, cobros y auditoría no pueden borrarse por diseño; definir qué se bloquea, por cuánto tiempo y cómo se informa al titular.',
   'Transferencias y encargados: confirmar la redacción sobre Supabase y Vercel (posible tratamiento fuera de México) y si se requieren cláusulas o avisos adicionales.',
   'Datos de las personas recomendadas: cómo se les informa del tratamiento al ser contactadas y el alcance de la autorización que declara el aliado.',
@@ -39,7 +39,7 @@ export interface LegalSection {
 }
 
 const RESPONSIBLE_PARAGRAPH = `${LEGAL_RESPONSIBLE_NAME}, ${LEGAL_RESPONSIBLE_ROLE}. Domicilio: ${LEGAL_ADDRESS_LINE}${
-  LEGAL_FISCAL_ADDRESS ? '' : ' (domicilio fiscal por confirmar)'
+  LEGAL_ADDRESS_PUBLICATION_AUTHORIZED ? '' : ' (domicilio fiscal por confirmar)'
 }.`;
 
 export const PRIVACY_SECTIONS: readonly LegalSection[] = [
@@ -106,7 +106,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
   {
     title: 'Conservación',
     items: [
-      'Las solicitudes rechazadas se conservan al menos 30 días para evitar solicitudes repetidas.',
+      'Las solicitudes rechazadas se conservan mientras no se defina su plazo de eliminación. Tras un rechazo, el mismo correo no puede volver a solicitar el registro durante 30 días; es una medida contra el abuso, no el plazo de conservación.',
       'Los datos de tu cuenta y de tus recomendaciones se conservan mientras participes en el programa y el tiempo necesario para cumplir obligaciones legales; los plazos exactos están pendientes de validación legal.',
       'Los registros de ventas, cobros, comisiones y auditoría no se eliminan por su naturaleza contable y de control; el alcance de tu derecho de cancelación respecto de ellos está pendiente de validación legal.',
     ],
