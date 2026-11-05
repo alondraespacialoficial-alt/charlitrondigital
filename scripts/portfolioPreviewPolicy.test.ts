@@ -8,6 +8,14 @@ import {
   isPortfolioStorageEnabled,
 } from './portfolioPreviewPolicy';
 
+test('Preview isolation applies only to Preview of the two allowed branches', () => {
+  const env = (VERCEL_ENV: string, VERCEL_GIT_COMMIT_REF: string) => ({ VERCEL_ENV, VERCEL_GIT_COMMIT_REF });
+  assert.equal(isPortfolioPreviewEnvironment(env('preview', 'feat/aliados-charlitron')), true);
+  assert.equal(isPortfolioPreviewEnvironment(env('preview', 'feat/portafolio-proyectos-v2')), true);
+  assert.equal(isPortfolioPreviewEnvironment(env('production', 'feat/aliados-charlitron')), false);
+  assert.equal(isPortfolioPreviewEnvironment(env('preview', 'main')), false);
+});
+
 test('public manifest reads need Production/main AND the explicit flag', () => {
   const production = { VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'main' };
   assert.equal(isPortfolioPublicMediaEnabled(production), false);

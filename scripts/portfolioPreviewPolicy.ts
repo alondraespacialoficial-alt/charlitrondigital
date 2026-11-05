@@ -1,11 +1,14 @@
-export const PORTFOLIO_PREVIEW_BRANCH = 'feat/portafolio-proyectos-v2';
+export const PORTFOLIO_PREVIEW_BRANCHES = [
+  'feat/portafolio-proyectos-v2',
+  'feat/aliados-charlitron',
+] as const;
 
 export function isPortfolioPreviewEnvironment(
   environment: Record<string, string | undefined>,
 ): boolean {
   return (
     environment.VERCEL_ENV === 'preview' &&
-    environment.VERCEL_GIT_COMMIT_REF === PORTFOLIO_PREVIEW_BRANCH
+    PORTFOLIO_PREVIEW_BRANCHES.some((branch) => branch === environment.VERCEL_GIT_COMMIT_REF)
   );
 }
 
