@@ -262,7 +262,7 @@ export function AllyLegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
         </Link>
         {!ALIADOS_LEGAL_APPROVED && (
           <div role="note" className="mb-8 rounded-md border border-amber-200/30 bg-amber-200/[0.06] p-4 text-sm leading-6 text-amber-100">
-            <strong>Borrador pendiente de validación legal.</strong> Este texto es una propuesta y no constituye un documento definitivo. Faltan por confirmar la identificación completa del responsable, su domicilio, los plazos de conservación y la ley aplicable.
+            <strong>Borrador pendiente de validación legal.</strong> Este texto es una propuesta y no constituye un documento definitivo. Faltan por confirmar el domicilio fiscal del responsable, los plazos de conservación, el procedimiento ARCO, la documentación fiscal y la ley aplicable.
           </div>
         )}
         <h1 className="font-display text-3xl font-semibold text-white">

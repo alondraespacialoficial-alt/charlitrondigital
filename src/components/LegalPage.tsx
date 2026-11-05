@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Shield, FileText, Cookie, Mail, CheckCircle2, ChevronRight, Home } from 'lucide-react';
 import { CharlitronLogo } from './CharlitronLogo';
 import { CONTACT_EMAIL, PHONE_DISPLAY } from '../data/content';
+import { LEGAL_ADDRESS_LINE, LEGAL_RESPONSIBLE_NAME } from '../data/legalEntity';
 
 export type LegalTab = 'privacidad' | 'terminos' | 'cookies';
 
@@ -119,7 +120,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ initialTab = 'privacidad',
                 Aviso de Privacidad Integral
               </h2>
               <p className="text-xs text-zinc-400 mt-1">
-                Última actualización: Enero de 2026 • Conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).
+                Última actualización: Noviembre de 2026 • Conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).
               </p>
             </div>
 
@@ -130,10 +131,10 @@ export const LegalPage: React.FC<LegalPageProps> = ({ initialTab = 'privacidad',
                   Responsable del Tratamiento
                 </h3>
                 <p className="text-base text-white font-medium">
-                  José Adrián Álvarez Carlos
+                  {LEGAL_RESPONSIBLE_NAME}
                 </p>
                 <p className="text-xs text-zinc-400 mt-1">
-                  En representación de Charlitron Digital (y/o la razón social Charlitron Digital S.A. de C.V.).
+                  Persona física, titular fiscal y responsable legal de la operación Charlitron Digital.
                 </p>
               </div>
 
@@ -142,7 +143,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ initialTab = 'privacidad',
                   Domicilio Fiscal y Ubicación
                 </h3>
                 <p className="text-base text-white font-medium">
-                  San Luis Potosí, S.L.P., México
+                  {LEGAL_ADDRESS_LINE}
                 </p>
                 <p className="text-xs text-zinc-400 mt-1">
                   Para fines de notificación y trámites legales oficiales.
@@ -232,7 +233,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ initialTab = 'privacidad',
                 </p>
                 <div className="mt-2 inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-zinc-800 text-amber-400 font-mono text-xs border border-zinc-700">
                   <Mail className="w-4 h-4" />
-                  <span>nadrian18@gmail.com</span>
+                  <span>{CONTACT_EMAIL}</span>
                 </div>
               </div>
             </section>
