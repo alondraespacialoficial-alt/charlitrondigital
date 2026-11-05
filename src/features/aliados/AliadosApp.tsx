@@ -58,12 +58,19 @@ function useAliadosMeta(path: string) {
     const originalElements = new Set(previousElements.map(({ element }) => element));
     const previousJsonLd = document.getElementById('charlitron-jsonld-page')?.cloneNode(true);
     const isPublicPage = path === '/aliados';
+    const isTermsPage = path === '/aliados/terminos';
 
     applyPageMeta({
-      title: isPublicPage ? 'Aliados Charlitron | Recomienda oportunidades de negocio' : 'Acceso de aliados | Charlitron Digital',
+      title: isPublicPage
+        ? 'Aliados Charlitron | Recomienda oportunidades de negocio'
+        : isTermsPage
+          ? 'Términos del Programa Aliados (borrador) | Charlitron Digital'
+          : 'Acceso de aliados | Charlitron Digital',
       description: isPublicPage
         ? 'Recomienda negocios a Charlitron y recibe una comisión según el acuerdo cuando el proyecto se concrete y se cobre.'
-        : 'Acceso al espacio de aliados Charlitron.',
+        : isTermsPage
+          ? 'Borrador de los términos del programa Aliados Charlitron, pendiente de validación legal.'
+          : 'Acceso al espacio de aliados Charlitron.',
       canonicalPath: path,
     });
     const robots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
@@ -133,6 +140,7 @@ export function AliadosApp() {
   useAliadosMeta(path);
 
   if (path === '/aliados') return <AlliesLanding />;
+  if (path === '/aliados/terminos') return <AllyTermsPage />;
   if (path === '/aliados/ingresar') return <PartnerLogin onLogin={() => {
     setDemoSignedIn(true);
     navigate('/aliados/panel');
@@ -329,7 +337,13 @@ function RegistrationDialog({ onClose }: { onClose: () => void }) {
             </div>
             <label className="flex items-start gap-3 pt-1 text-xs leading-5 text-zinc-400">
               <input required type="checkbox" className="mt-1 accent-amber-300" />
-              Acepto que Charlitron me contacte para revisar mi solicitud. El registro es gratuito; las condiciones de comisión se acuerdan para cada proyecto.
+              <span>
+                He leído el{' '}
+                <a href="/#legal-privacidad" target="_blank" rel="noopener noreferrer" className="text-amber-200 underline underline-offset-2 hover:text-amber-100">Aviso de Privacidad</a>{' '}
+                y los{' '}
+                <a href="/aliados/terminos" target="_blank" rel="noopener noreferrer" className="text-amber-200 underline underline-offset-2 hover:text-amber-100">Términos del Programa Aliados (borrador)</a>
+                , y acepto que Charlitron me contacte para revisar mi solicitud.
+              </span>
             </label>
             <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-amber-300 px-5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
               Solicitar registro <ArrowRight className="h-4 w-4" />
@@ -339,6 +353,42 @@ function RegistrationDialog({ onClose }: { onClose: () => void }) {
         )}
       </section>
     </div>
+  );
+}
+
+const programTerms = [
+  { title: 'Qué es el programa', text: 'Aliados Charlitron es un programa de recomendación. No genera relación laboral, de representación ni sociedad, y no implica exclusividad.' },
+  { title: 'Recomendación válida', text: 'Debe tratarse de un negocio con interés real y que haya aceptado ser contactado. Charlitron decide si atiende cada recomendación.' },
+  { title: 'Comisión', text: 'Se acuerda por escrito para cada proyecto. No hay porcentajes fijos ni ingresos garantizados, y solo se libera después de que Charlitron cobra al cliente.' },
+  { title: 'Conducta del aliado', text: 'No enviar spam, no hacer declaraciones engañosas sobre servicios o precios y no usar el nombre de Charlitron fuera de lo acordado.' },
+  { title: 'Datos de los referidos', text: 'El aliado protege la información de los negocios y personas que recomienda, y la comparte únicamente para fines del programa.' },
+  { title: 'Cambios y baja', text: 'Charlitron puede modificar el programa o dar de baja cuentas. Las comisiones ya devengadas se respetan conforme al acuerdo del proyecto.' },
+];
+
+function AllyTermsPage() {
+  return (
+    <main className="min-h-screen bg-[#09090b] px-5 py-10 text-zinc-100 sm:px-8">
+      <div className="mx-auto max-w-2xl">
+        <Link to="/aliados" className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
+          <ArrowLeft className="h-4 w-4" /> Volver a Aliados
+        </Link>
+        <div role="note" className="mb-8 rounded-md border border-amber-200/30 bg-amber-200/[0.06] p-4 text-sm leading-6 text-amber-100">
+          <strong>Borrador pendiente de validación legal.</strong> Este texto es una propuesta y no constituye un documento definitivo. Aún faltan por definir la identificación del responsable, su domicilio, las finalidades y el tratamiento de datos de prospectos referidos.
+        </div>
+        <h1 className="font-display text-3xl font-semibold text-white">Términos del Programa Aliados Charlitron</h1>
+        <ol className="mt-8 space-y-6">
+          {programTerms.map(({ title, text }, index) => (
+            <li key={title} className="border-t border-white/10 pt-5">
+              <h2 className="font-display text-lg font-semibold text-white">{index + 1}. {title}</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-300">{text}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-10 border-t border-white/10 pt-5 text-xs leading-5 text-zinc-500">
+          Prototipo visual: no existe registro real. Para el Aviso de Privacidad vigente consulta <a href="/#legal-privacidad" target="_blank" rel="noopener noreferrer" className="text-amber-200 underline underline-offset-2">el aviso general</a>.
+        </p>
+      </div>
+    </main>
   );
 }
 
