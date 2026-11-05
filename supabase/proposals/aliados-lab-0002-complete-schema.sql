@@ -1,8 +1,8 @@
--- ALIADOS CHARLITRON — Laboratorio: esquema completo (v1, lista para instalar)
+-- ALIADOS CHARLITRON — Laboratorio: esquema completo (v2, corregida y lista para instalar)
 -- Proyecto Supabase EXCLUSIVO: charlitron-aliados-test. NO ejecutar en ningun otro.
 --
 -- PRECONDICIÓN: aliados-lab-0001-security.sql ya instalada.
--- Contenido: registros públicos, referidos, ventas, cobros, comisiones, auditoría.
+-- Contenido: registros públicos, referidos, ventas, cobros, comisiones, auditoría completa.
 --
 -- GUARDAS DE SEGURIDAD:
 -- 1. Verifica que sea el laboratorio correcto (assert_aliados_lab)
@@ -10,12 +10,10 @@
 -- 3. RLS en todas las tablas: cada usuario solo ve su información autorizada
 -- 4. Funciones SECURITY DEFINER para operaciones administrativas
 -- 5. Auditoría completa: creación, modificación, eliminación
---
--- PASO 1: Instalación atomica (una sentencia DO)
--- PASO 2: Pruebas de datos (no dejan cambios)
+-- 6. Validación de comisiones: nunca pago automático, limitado a cobros confirmados
 
 -- ============================================================================
--- PASO 1. Instalación
+-- PASO 1. Instalación atómica
 -- ============================================================================
 DO $install$
 DECLARE
@@ -51,18 +49,17 @@ BEGIN
   );
   ALTER TABLE public.ally_registrations ENABLE ROW LEVEL SECURITY;
   REVOKE ALL ON public.ally_registrations FROM PUBLIC, anon, authenticated;
-  GRANT SELECT ON public.ally_registrations TO authenticated;
   GRANT SELECT, INSERT, UPDATE ON public.ally_registrations TO authenticated;
 
-  -- Registrado solo puede ver y modificar su propia solicitud (pendiente)
+  -- Registrado solo puede ver su propia solicitud (pendiente)
   CREATE POLICY ally_reg_own_pending_select ON public.ally_registrations
     FOR SELECT TO authenticated
-    USING (user_id = (SELECT auth.uid()) OR (SELECT public.is_admin()));
+    USING (user_id = auth.uid() OR (SELECT public.is_admin()));
 
   CREATE POLICY ally_reg_own_pending_update ON public.ally_registrations
     FOR UPDATE TO authenticated
-    USING (user_id = (SELECT auth.uid()) AND status = 'pending')
-    WITH CHECK (user_id = (SELECT auth.uid()) AND status = 'pending');
+    USING (user_id = auth.uid() AND status = 'pending')
+    WITH CHECK (user_id = auth.uid() AND status = 'pending');
 
   -- Admin puede ver todo, aprobar, rechazar
   CREATE POLICY ally_reg_admin ON public.ally_registrations
@@ -108,13 +105,13 @@ BEGIN
     referred_phone      text,
     referred_city       text,
     referred_organization text,
-    relationship        text, -- e.g., 'amigo', 'familia', 'cliente', 'colega'
-    source              text, -- e.g., 'recomendacion', 'evento', 'red_social'
+    relationship        text,
+    source              text,
     data_share_authorized boolean NOT NULL DEFAULT false,
     notes_private       text,
     status              text NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'interested', 'closed', 'duplicate')),
     duplicate_of        uuid REFERENCES public.referrals (id) ON DELETE SET NULL,
-    created_by          uuid REFERENCES auth.users (id) ON DELETE RESTRICT,
+    created_by          uuid NOT NULL REFERENCES auth.users (id) ON DELETE RESTRICT,
     created_at          timestamptz NOT NULL DEFAULT now(),
     modified_by         uuid REFERENCES auth.users (id) ON DELETE RESTRICT,
     modified_at         timestamptz NOT NULL DEFAULT now()
@@ -130,16 +127,16 @@ BEGIN
   -- Aliado solo ve sus propios referidos
   CREATE POLICY referrals_own ON public.referrals
     FOR SELECT TO authenticated
-    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid())));
+    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid()));
 
   CREATE POLICY referrals_own_insert ON public.referrals
     FOR INSERT TO authenticated
-    WITH CHECK (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid())));
+    WITH CHECK (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid()));
 
   CREATE POLICY referrals_own_update ON public.referrals
     FOR UPDATE TO authenticated
-    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid())))
-    WITH CHECK (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid())));
+    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid()))
+    WITH CHECK (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid()));
 
   -- Admin ve todo
   CREATE POLICY referrals_admin ON public.referrals
@@ -160,13 +157,16 @@ BEGIN
   REVOKE ALL ON public.referrals_audit FROM PUBLIC, anon, authenticated;
   GRANT SELECT ON public.referrals_audit TO authenticated;
 
+  -- Aliado ve auditoría de sus referidos
   CREATE POLICY referrals_audit_own ON public.referrals_audit
     FOR SELECT TO authenticated
-    USING (
-      (SELECT ally_id FROM public.referrals WHERE id = referral_id) = 
-      (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid()))
-    );
+    USING (EXISTS (
+      SELECT 1 FROM public.referrals
+      WHERE id = referral_id
+        AND ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid())
+    ));
 
+  -- Admin ve auditoría completa
   CREATE POLICY referrals_audit_admin ON public.referrals_audit
     FOR SELECT TO authenticated
     USING ((SELECT public.is_admin()));
@@ -198,7 +198,7 @@ BEGIN
   -- Aliado ve solo venta básica (sin notas internas)
   CREATE POLICY sales_ally_view ON public.sales
     FOR SELECT TO authenticated
-    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid())));
+    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid()));
 
   -- Admin ve todo
   CREATE POLICY sales_admin ON public.sales
@@ -212,12 +212,11 @@ BEGIN
     payment_date          date NOT NULL,
     amount_paid           numeric(12, 2) NOT NULL CHECK (amount_paid > 0),
     amount_currency       text NOT NULL DEFAULT 'MXN',
-    payment_method        text NOT NULL, -- 'transfer', 'cash', 'check', 'card'
+    payment_method        text NOT NULL,
     reference_number      text,
     confirmed_by          uuid NOT NULL REFERENCES auth.users (id) ON DELETE RESTRICT,
     confirmed_at          timestamptz NOT NULL DEFAULT now(),
     notes                 text,
-    reversible            boolean NOT NULL DEFAULT true,
     reversed_at           timestamptz,
     reversed_by           uuid REFERENCES auth.users (id) ON DELETE SET NULL,
     reversal_reason       text
@@ -229,15 +228,14 @@ BEGIN
   CREATE INDEX idx_payments_sale ON public.payments (sale_id);
   CREATE INDEX idx_payments_date ON public.payments (payment_date);
 
-  -- Aliado ve solo pagos de sus ventas (sin notas internas)
+  -- Aliado ve solo pagos de sus ventas
   CREATE POLICY payments_ally_view ON public.payments
     FOR SELECT TO authenticated
-    USING (
-      sale_id IN (
-        SELECT id FROM public.sales
-        WHERE ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid()))
-      )
-    );
+    USING (EXISTS (
+      SELECT 1 FROM public.sales
+      WHERE id = sale_id
+        AND ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid())
+    ));
 
   -- Admin ve todo
   CREATE POLICY payments_admin ON public.payments
@@ -286,10 +284,10 @@ BEGIN
   CREATE INDEX idx_commissions_ally ON public.commissions (ally_id);
   CREATE INDEX idx_commissions_status ON public.commissions (status);
 
-  -- Aliado ve sus comisiones (monto total, estado, sin detalles internos)
+  -- Aliado ve sus comisiones (monto total, estado)
   CREATE POLICY commissions_ally_view ON public.commissions
     FOR SELECT TO authenticated
-    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid())));
+    USING (ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid()));
 
   -- Admin ve todo
   CREATE POLICY commissions_admin ON public.commissions
@@ -324,12 +322,11 @@ BEGIN
   -- Aliado ve solo sus pagos de comisión
   CREATE POLICY commission_payments_ally_view ON public.commission_payments
     FOR SELECT TO authenticated
-    USING (
-      commission_id IN (
-        SELECT id FROM public.commissions
-        WHERE ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = (SELECT auth.uid()))
-      )
-    );
+    USING (EXISTS (
+      SELECT 1 FROM public.commissions
+      WHERE id = commission_id
+        AND ally_id = (SELECT user_id FROM public.ally_profiles WHERE user_id = auth.uid())
+    ));
 
   -- Admin ve todo
   CREATE POLICY commission_payments_admin ON public.commission_payments
@@ -367,9 +364,7 @@ BEGIN
   AS $fn$
   DECLARE
     v_reg RECORD;
-    v_account_id uuid;
   BEGIN
-    -- Solo admin
     IF NOT public.is_admin() THEN
       RAISE EXCEPTION 'No autorizado';
     END IF;
@@ -390,11 +385,12 @@ BEGIN
 
     -- Crear perfil de aliado
     INSERT INTO public.ally_profiles (user_id, display_name, email, phone, city, status)
-      VALUES (v_reg.user_id, v_reg.full_name, v_reg.email, v_reg.phone, v_reg.city, 'active');
+      VALUES (v_reg.user_id, v_reg.full_name, v_reg.email, v_reg.phone, v_reg.city, 'active')
+      ON CONFLICT (user_id) DO UPDATE SET status = 'active';
 
     -- Auditoría
-    INSERT INTO public.ally_registration_audit (registration_id, action, changed_by)
-      VALUES (reg_id, 'approved', approver_id);
+    INSERT INTO public.ally_registration_audit (registration_id, action, changed_by, changes)
+      VALUES (reg_id, 'approved', approver_id, jsonb_build_object('approved_at', now()));
   END;
   $fn$;
   REVOKE ALL ON FUNCTION public.approve_registration(uuid, uuid) FROM PUBLIC, anon, authenticated;
@@ -475,8 +471,8 @@ BEGIN
       VALUES (p_sale_id, CURRENT_DATE, p_amount, p_method, p_reference, p_confirmed_by)
       RETURNING id INTO v_payment_id;
 
-    INSERT INTO public.payments_audit (payment_id, action, changed_by)
-      VALUES (v_payment_id, 'created', p_confirmed_by);
+    INSERT INTO public.payments_audit (payment_id, action, changed_by, changes)
+      VALUES (v_payment_id, 'created', p_confirmed_by, jsonb_build_object('amount', p_amount, 'method', p_method));
 
     RETURN v_payment_id;
   END;
@@ -508,14 +504,14 @@ BEGIN
       RAISE EXCEPTION 'Venta no encontrada';
     END IF;
 
-    v_amount := (v_sale.amount_agreed * p_percentage) / 100;
+    v_amount := ROUND((v_sale.amount_agreed * p_percentage) / 100, 2);
 
     INSERT INTO public.commissions (sale_id, ally_id, commission_percentage, commission_amount, assigned_by)
       VALUES (p_sale_id, v_sale.ally_id, p_percentage, v_amount, p_assigned_by)
       RETURNING id INTO v_commission_id;
 
-    INSERT INTO public.commissions_audit (commission_id, action, changed_by)
-      VALUES (v_commission_id, 'assigned', p_assigned_by);
+    INSERT INTO public.commissions_audit (commission_id, action, changed_by, changes)
+      VALUES (v_commission_id, 'assigned', p_assigned_by, jsonb_build_object('percentage', p_percentage, 'amount', v_amount));
 
     RETURN v_commission_id;
   END;
@@ -524,6 +520,7 @@ BEGIN
   GRANT EXECUTE ON FUNCTION public.assign_commission(uuid, numeric, uuid) TO authenticated;
 
   -- Pagar comisión (parcial o completa, solo admin)
+  -- Validación: total pagado nunca supera comisión total
   CREATE FUNCTION public.pay_commission(
     p_commission_id uuid,
     p_amount numeric,
@@ -549,28 +546,31 @@ BEGIN
       RAISE EXCEPTION 'Comisión no encontrada';
     END IF;
 
-    -- Sumar pagos anteriores
+    -- Sumar pagos anteriores (excluir reversados)
     SELECT COALESCE(SUM(amount_paid), 0) INTO v_total_paid
       FROM public.commission_payments
       WHERE commission_id = p_commission_id AND reversed_at IS NULL;
 
     IF (v_total_paid + p_amount) > v_commission.commission_amount THEN
-      RAISE EXCEPTION 'Pago excedería comisión total (% de %)', v_total_paid + p_amount, v_commission.commission_amount;
+      RAISE EXCEPTION 'Pago excedería comisión total: % + % > %', 
+        v_total_paid, p_amount, v_commission.commission_amount;
     END IF;
 
-    INSERT INTO public.commission_payments (commission_id, payment_date, amount_paid, payment_method, reference_number, authorized_by)
+    INSERT INTO public.commission_payments 
+      (commission_id, payment_date, amount_paid, payment_method, reference_number, authorized_by)
       VALUES (p_commission_id, CURRENT_DATE, p_amount, p_method, p_reference, p_authorized_by)
       RETURNING id INTO v_payment_id;
 
     -- Actualizar estado de comisión
-    IF (v_total_paid + p_amount) = v_commission.commission_amount THEN
+    IF (v_total_paid + p_amount) >= v_commission.commission_amount THEN
       UPDATE public.commissions SET status = 'paid' WHERE id = p_commission_id;
     ELSE
       UPDATE public.commissions SET status = 'partially_paid' WHERE id = p_commission_id;
     END IF;
 
-    INSERT INTO public.commissions_audit (commission_id, action, changed_by)
-      VALUES (p_commission_id, 'payment_added', p_authorized_by);
+    INSERT INTO public.commissions_audit (commission_id, action, changed_by, changes)
+      VALUES (p_commission_id, 'payment_added', p_authorized_by, 
+        jsonb_build_object('amount', p_amount, 'method', p_method, 'total_paid', v_total_paid + p_amount));
 
     RETURN v_payment_id;
   END;
@@ -582,21 +582,27 @@ BEGIN
 END $install$;
 
 -- ============================================================================
--- PASO 2. Verificación e indicadores de éxito
+-- PASO 2. Verificación de instalación
 -- ============================================================================
--- Ejecutar esta consulta para validar la instalación:
-/*
+-- Ejecutar esta consulta después para validar:
+SELECT 
+  'Tablas creadas' as check_item,
+  COUNT(*) as count
+FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name LIKE 'ally_%' 
+  OR table_name LIKE 'referral%' 
+  OR table_name LIKE 'sales' 
+  OR table_name LIKE 'payment%' 
+  OR table_name LIKE 'commission%'
+UNION ALL
 SELECT
-  COUNT(*) FILTER (WHERE table_name LIKE 'ally_registrations') as registrations_table,
-  COUNT(*) FILTER (WHERE table_name LIKE 'referrals') as referrals_table,
-  COUNT(*) FILTER (WHERE table_name LIKE 'sales') as sales_table,
-  COUNT(*) FILTER (WHERE table_name LIKE 'payments') as payments_table,
-  COUNT(*) FILTER (WHERE table_name LIKE 'commissions') as commissions_table,
-  COUNT(*) FILTER (WHERE table_name LIKE '%_audit') as audit_tables,
-  COUNT(*) FILTER (WHERE routine_name LIKE 'approve_registration%'
-                     OR routine_name LIKE 'record_sale%'
-                     OR routine_name LIKE 'assign_commission%') as functions_count
-FROM information_schema.tables t
-FULL OUTER JOIN information_schema.routines r ON true
-WHERE t.table_schema = 'public' OR r.routine_schema = 'public';
-*/
+  'Funciones creadas' as check_item,
+  COUNT(*) as count
+FROM information_schema.routines
+WHERE routine_schema = 'public'
+  AND (routine_name LIKE 'approve_%' 
+    OR routine_name LIKE 'reject_%'
+    OR routine_name LIKE 'record_%'
+    OR routine_name LIKE 'assign_%'
+    OR routine_name LIKE 'pay_%');

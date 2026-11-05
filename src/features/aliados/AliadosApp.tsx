@@ -28,7 +28,8 @@ type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
 
 // Carga diferida: los paneles no viajan en el código del área de landing.
 const AliadosAdminPrototype = lazy(() => import('./AliadosAdminPrototype'));
-const AliadosAdminComplete = lazy(() => import('./AliadosAdminComplete'));
+const AliadosAdminPanel = lazy(() => import('./AliadosAdminPanel').then(m => ({ default: m.AliadosAdminPanel })));
+const AllyRegistrationForm = lazy(() => import('./AllyRegistrationForm').then(m => ({ default: m.AllyRegistrationForm })));
 
 const ROUTE_META_SELECTORS = [
   'meta[name="description"]',
@@ -192,7 +193,7 @@ function AdminGate({ session, onSignOut }: { session: AliadosSession; onSignOut:
   }
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#09090b]" />}>
-      <AliadosAdminComplete onSignOut={onSignOut} />
+      <AliadosAdminPanel />
     </Suspense>
   );
 }

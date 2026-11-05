@@ -107,6 +107,16 @@ export class AliadosRepository {
     return data as AllyProfile[];
   }
 
+  async listRegistrations() {
+    const { data, error } = await this.client
+      .from('ally_registrations')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(`Failed to list registrations: ${error.message}`);
+    return data as AllyRegistration[];
+  }
+
   async getAllyById(userId: string) {
     const { data, error } = await this.client
       .from('ally_profiles')
@@ -130,6 +140,16 @@ export class AliadosRepository {
   // ============================================
   // REFERRALS
   // ============================================
+
+  async listReferrals() {
+    const { data, error } = await this.client
+      .from('referrals')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(`Failed to list referrals: ${error.message}`);
+    return data as Referral[];
+  }
 
   async createReferral(referral: Omit<Referral, 'id' | 'created_at' | 'modified_at'>, createdBy: string) {
     const { data, error } = await this.client
@@ -186,6 +206,16 @@ export class AliadosRepository {
   // SALES
   // ============================================
 
+  async listSales() {
+    const { data, error } = await this.client
+      .from('sales')
+      .select('*')
+      .order('sale_date', { ascending: false });
+
+    if (error) throw new Error(`Failed to list sales: ${error.message}`);
+    return data as Sale[];
+  }
+
   async listSalesByAlly(allyId: string) {
     const { data, error } = await this.client
       .from('sales')
@@ -211,6 +241,16 @@ export class AliadosRepository {
   // ============================================
   // PAYMENTS
   // ============================================
+
+  async listPayments() {
+    const { data, error } = await this.client
+      .from('payments')
+      .select('*')
+      .order('payment_date', { ascending: false });
+
+    if (error) throw new Error(`Failed to list payments: ${error.message}`);
+    return data as Payment[];
+  }
 
   async listPaymentsBySale(saleId: string) {
     const { data, error } = await this.client
@@ -238,6 +278,26 @@ export class AliadosRepository {
   // ============================================
   // COMMISSIONS
   // ============================================
+
+  async listCommissions() {
+    const { data, error } = await this.client
+      .from('commissions')
+      .select('*')
+      .order('assigned_at', { ascending: false });
+
+    if (error) throw new Error(`Failed to list commissions: ${error.message}`);
+    return data as Commission[];
+  }
+
+  async listCommissionPayments() {
+    const { data, error } = await this.client
+      .from('commission_payments')
+      .select('*')
+      .order('payment_date', { ascending: false });
+
+    if (error) throw new Error(`Failed to list commission payments: ${error.message}`);
+    return data as CommissionPayment[];
+  }
 
   async listCommissionsByAlly(allyId: string) {
     const { data, error } = await this.client
