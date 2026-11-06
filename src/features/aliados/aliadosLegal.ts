@@ -214,7 +214,7 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
   {
     title: 'Aceptación y condiciones de inicio',
     paragraphs: [
-      'La invitación o aprobación administrativa no equivale a aceptar términos. Antes de operar, el aliado deberá acceder a los documentos completos y realizar aceptación afirmativa registrando cuenta, fecha, versión y evidencia técnica. Si no acepta, no debe comenzar a registrar recomendaciones',
+      'La invitación o aprobación administrativa no equivale a aceptar términos. Antes de operar, el aliado deberá acceder a los documentos completos y realizar aceptación afirmativa registrando cuenta, fecha, versión y evidencia técnica. Si no acepta, no debe comenzar a registrar recomendaciones.',
     ],
   },
 ];
