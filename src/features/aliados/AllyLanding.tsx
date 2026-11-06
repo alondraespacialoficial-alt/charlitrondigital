@@ -62,11 +62,11 @@ export function AlliesLanding() {
             </Link>
             <div className="flex items-center gap-2 text-sm text-zinc-400">
               <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              Registro gratuito
+              Programa gratuito, solo por invitación
             </div>
           </div>
           <p className="mt-4 max-w-lg text-xs leading-5 text-zinc-500">
-            Las comisiones dependen de las condiciones acordadas para cada proyecto. No hay porcentajes fijos ni ingresos garantizados.
+            El programa funciona por invitación de Charlitron; el registro público está cerrado. Las comisiones dependen de las condiciones acordadas para cada proyecto. No hay porcentajes fijos ni ingresos garantizados.
           </p>
         </div>
 

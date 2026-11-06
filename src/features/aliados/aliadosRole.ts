@@ -1,8 +1,10 @@
+import { fetchAcceptanceState, type AcceptanceClient } from './aliadosAcceptance';
+
 export type AllyStatus = 'pending' | 'active' | 'paused';
 
 export type AliadosRole =
   | { kind: 'admin' }
-  | { kind: 'ally'; status: AllyStatus; displayName: string }
+  | { kind: 'ally'; status: AllyStatus; displayName: string; accepted: boolean }
   | { kind: 'none' };
 
 interface QueryResult {
@@ -11,7 +13,7 @@ interface QueryResult {
 }
 
 // Subconjunto minimo de supabase-js, para poder probar la logica sin red.
-export interface RoleQueryClient {
+export interface RoleQueryClient extends AcceptanceClient {
   from(table: string): {
     select(columns: string): {
       eq(column: string, value: string): {
@@ -36,20 +38,25 @@ export async function resolveAliadosRole(client: RoleQueryClient, userId: string
 
   const row = ally.data as { display_name?: unknown; status?: unknown };
   const status = STATUSES.find((value) => value === row.status);
+  const resolved = status ?? 'paused';
+  // La aceptacion vigente solo se consulta para aliados activos y siempre la decide la base; un error se propaga.
+  const accepted = resolved === 'active' ? (await fetchAcceptanceState(client)).accepted : false;
   return {
     kind: 'ally',
     // Un estado desconocido se trata como pausado: ante la duda, sin acceso al panel.
-    status: status ?? 'paused',
+    status: resolved,
     displayName: typeof row.display_name === 'string' ? row.display_name : '',
+    accepted,
   };
 }
 
-export type AccessDestination = 'admin' | 'panel' | 'pending' | 'paused' | 'denied';
+export type AccessDestination = 'admin' | 'panel' | 'acceptance' | 'pending' | 'paused' | 'denied';
 
 export function destinationFor(role: AliadosRole): AccessDestination {
   if (role.kind === 'admin') return 'admin';
   if (role.kind === 'ally') {
-    if (role.status === 'active') return 'panel';
+    // Activo pero sin aceptacion vigente: solo puede ver la pantalla de aceptacion.
+    if (role.status === 'active') return role.accepted ? 'panel' : 'acceptance';
     return role.status === 'pending' ? 'pending' : 'paused';
   }
   return 'denied';

@@ -1,4 +1,4 @@
-export const ALIADOS_PREVIEW_BRANCHES = ['feat/aliados-charlitron', 'feat/aliados-registro-publico'] as const;
+export const ALIADOS_PREVIEW_BRANCHES = ['feat/aliados-charlitron', 'feat/aliados-registro-publico', 'feat/aliados-aceptacion-electronica'] as const;
 
 // Referencia del proyecto editorial (produccion): nunca puede usarse para Aliados.
 const EDITORIAL_PROJECT_REF = 'rvvqhpbtqgjpzflopflv';

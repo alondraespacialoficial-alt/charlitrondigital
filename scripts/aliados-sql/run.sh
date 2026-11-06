@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Valida las migraciones 0002 a 0005 en un PostgreSQL real y desechable (Docker). Solo pruebas locales.
+# Valida las migraciones 0002 a 0007 en un PostgreSQL real y desechable (Docker). Solo pruebas locales.
 # Resultado = codigos de salida de psql. Cualquier fallo detiene el script con exit != 0.
 set -euo pipefail
 
@@ -71,8 +71,107 @@ if psql_c -f - < "$PROPOSALS/aliados-lab-0005-admin-invite.sql" >/dev/null 2>&1;
 fi
 echo "ok  la segunda instalacion de 0005 fue rechazada (exit != 0)"
 
-step "Pruebas funcionales y de acceso indebido"
+step "Pruebas funcionales y de acceso indebido (0001-0005, antes de exigir aceptacion)"
 psql_c -f - < "$HERE/tests.sql"
+
+step "Estado real de la base antes de 0006: registro publico cerrado (tests.sql lo abrio para probar 0004)"
+psql_c -c "UPDATE public.aliados_settings SET registration_open = false"
+
+step "Instalacion de 0006 (aceptacion electronica y bloqueo) sobre 0001-0005"
+psql_c -f - < "$PROPOSALS/aliados-lab-0006-acceptance.sql"
+
+step "Reinstalar 0006 debe FALLAR (guarda de idempotencia)"
+if psql_c -f - < "$PROPOSALS/aliados-lab-0006-acceptance.sql" >/dev/null 2>&1; then
+  echo "ERROR: la segunda instalacion de 0006 no fallo" >&2
+  exit 1
+fi
+echo "ok  la segunda instalacion de 0006 fue rechazada (exit != 0)"
+
+step "Con 0006 pero sin versiones publicadas (antes de 0007) nadie tiene aceptacion vigente"
+psql_c -f - <<'SQL'
+DO $$
+DECLARE v_u uuid;
+BEGIN
+  INSERT INTO auth.users (email, email_confirmed_at) VALUES ('pre0007@test.local', now()) RETURNING id INTO v_u;
+  INSERT INTO public.account_roles (user_id, role) VALUES (v_u, 'ally');
+  INSERT INTO public.ally_profiles (user_id, display_name) VALUES (v_u, 'Aliado Previo 0007');
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM public.admin_set_ally_status(v_u, 'active');
+  RESET ROLE;
+  PERFORM harness.as_user(v_u);
+  PERFORM harness.must((SELECT NOT accepted AND current_terms_version IS NULL FROM public.ally_acceptance_state()), 'sin documentos publicados: no aceptado');
+  PERFORM harness.expect_error($q$SELECT public.submit_referral('Previo','previo@ejemplo.com',NULL,NULL,NULL,true)$q$, '42501');
+  PERFORM harness.expect_error($q$SELECT public.ally_accept_terms('1.0','1.2',true,true)$q$, 'P0002');
+  RESET ROLE;
+END $$;
+SQL
+
+step "Instalacion de 0007 (versiones documentales generadas desde aliadosLegal.ts)"
+psql_c -f - < "$PROPOSALS/aliados-lab-0007-legal-documents.sql"
+
+step "Reinstalar 0007 debe FALLAR (guarda de idempotencia)"
+if psql_c -f - < "$PROPOSALS/aliados-lab-0007-legal-documents.sql" >/dev/null 2>&1; then
+  echo "ERROR: la segunda instalacion de 0007 no fallo" >&2
+  exit 1
+fi
+echo "ok  la segunda instalacion de 0007 fue rechazada (exit != 0)"
+
+step "Pruebas de aceptacion electronica y bloqueo (0006 + 0007)"
+psql_c -f - < "$HERE/tests-0006.sql"
+
+step "Reversion de 0006: restaura el acceso previo y conserva la evidencia"
+psql_c -f - <<'SQL'
+DO $$
+DECLARE v_u uuid;
+BEGIN
+  INSERT INTO auth.users (email, email_confirmed_at) VALUES ('rollback@test.local', now()) RETURNING id INTO v_u;
+  INSERT INTO public.account_roles (user_id, role) VALUES (v_u, 'ally');
+  INSERT INTO public.ally_profiles (user_id, display_name) VALUES (v_u, 'Aliado Reversion');
+  PERFORM harness.put('rb_ally', v_u);
+  PERFORM harness.as_user(harness.id('admin'));
+  PERFORM public.admin_set_ally_status(v_u, 'active');
+  RESET ROLE;
+  PERFORM harness.as_user(v_u);
+  PERFORM harness.expect_error($q$SELECT public.submit_referral('Rev','rev@ejemplo.com',NULL,NULL,NULL,true)$q$, '42501');
+  RESET ROLE;
+END $$;
+SQL
+psql_c -f - < "$PROPOSALS/aliados-lab-0006-acceptance-rollback.sql"
+psql_c -f - <<'SQL'
+DO $$
+BEGIN
+  PERFORM harness.as_user(harness.id('rb_ally'));
+  PERFORM public.submit_referral('Rev', 'rev@ejemplo.com', NULL, NULL, NULL, true);
+  RESET ROLE;
+  PERFORM harness.must((SELECT count(*) FROM public.ally_acceptances) > 0, 'la reversion conserva la evidencia');
+  PERFORM harness.must(to_regprocedure('public.ally_accept_terms(text, text, boolean, boolean)') IS NULL
+                       AND to_regclass('public.ally_current_acceptance') IS NULL, 'la reversion retira funciones y vistas nuevas');
+  PERFORM harness.must((SELECT registration_open = false FROM public.aliados_settings), 'registration_open sigue en false tras revertir');
+END $$;
+SQL
+echo "ok  la reversion restauro el acceso previo"
+
+step "Parte B de la reversion se rehusa a borrar evidencia existente"
+if sed -n '/^-- BEGIN;/,$p' "$PROPOSALS/aliados-lab-0006-acceptance-rollback.sql" | sed 's/^-- //' | psql_c -f - >/dev/null 2>&1; then
+  echo "ERROR: la parte B borro tablas con aceptaciones" >&2
+  exit 1
+fi
+echo "ok  la parte B fue rechazada con aceptaciones registradas"
+
+step "Parte B sin evidencia (se vacian las tablas solo en esta prueba) y reinstalacion limpia de 0006 + 0007"
+psql_c -c "ALTER TABLE public.ally_acceptances DISABLE TRIGGER USER; DELETE FROM public.ally_acceptances; ALTER TABLE public.ally_acceptances ENABLE TRIGGER USER;"
+sed -n '/^-- BEGIN;/,$p' "$PROPOSALS/aliados-lab-0006-acceptance-rollback.sql" | sed 's/^-- //' | psql_c -f -
+psql_c -f - < "$PROPOSALS/aliados-lab-0006-acceptance.sql"
+psql_c -f - < "$PROPOSALS/aliados-lab-0007-legal-documents.sql"
+psql_c -f - <<'SQL'
+DO $$
+BEGIN
+  PERFORM harness.as_user(harness.id('rb_ally'));
+  PERFORM harness.expect_error($q$SELECT public.submit_referral('Rev2','rev2@ejemplo.com',NULL,NULL,NULL,true)$q$, '42501');
+  RESET ROLE;
+END $$;
+SQL
+psql_c -f - < "$HERE/tests-0006.sql"
 
 step "Concurrencia real: dos sesiones psql"
 ADMIN="$(psql_c -tA -c "SELECT harness.id('admin')")"

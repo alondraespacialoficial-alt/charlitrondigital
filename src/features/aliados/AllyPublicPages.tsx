@@ -4,7 +4,8 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { CharlitronLogo } from '../../components/CharlitronLogo';
 import { aliadosSupabase } from './aliadosSupabase';
 import { activateAccount, linkErrorMessage, MIN_PASSWORD_LENGTH, parseAuthLink } from './aliadosActivation';
-import { ALIADOS_LEGAL_APPROVED, PRIVACY_SECTIONS, TERMS_SECTIONS, type LegalSection } from './aliadosLegal';
+import { ACCEPTANCE_ROUTE } from './aliadosAcceptance';
+import { ALIADOS_LEGAL_APPROVED, PRIVACY_DOCUMENT, TERMS_DOCUMENT, type LegalSection } from './aliadosLegal';
 import {
   fetchRegistrationAvailability,
   submitAllyRegistration,
@@ -156,8 +157,8 @@ export function AllyRegistrationPage() {
         <AllyRegistrationForm onSubmit={(input) => submitAllyRegistration(client, input)} />
       ) : (
         <div role="status" className="space-y-4 text-sm leading-6 text-zinc-300">
-          <p>El registro de nuevos aliados todavía no está abierto.</p>
-          <p className="text-zinc-500">Cuando abramos el registro podrás enviar tu solicitud desde esta página.</p>
+          <p>Aliados Charlitron funciona por invitación. El registro público todavía no está abierto.</p>
+          <p className="text-zinc-500">Si Charlitron te invitó, abre el enlace del correo de invitación (la invitación por WhatsApp es solo un aviso complementario) para activar tu cuenta y aceptar las condiciones dentro de la aplicación.</p>
           <Link to="/aliados/ingresar" className="inline-block text-amber-200 underline underline-offset-2">¿Ya eres aliado? Ingresa</Link>
         </div>
       )}
@@ -208,11 +209,11 @@ export function AllyActivationPage() {
       setError(problem);
       return;
     }
-    navigate('/aliados/panel', { replace: true });
+    navigate(ACCEPTANCE_ROUTE, { replace: true });
   };
 
   return (
-    <Frame title="Crea tu contraseña" subtitle="Tu solicitud fue aprobada. Elige una contraseña para entrar a tu panel.">
+    <Frame title="Crea tu contraseña" subtitle="Charlitron te invitó al programa. Elige una contraseña; en el siguiente paso aceptarás las condiciones para entrar a tu panel.">
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block text-sm text-zinc-300">
           Contraseña
@@ -254,26 +255,21 @@ function LegalSections({ sections }: { sections: readonly LegalSection[] }) {
 
 export function AllyLegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
   const isPrivacy = kind === 'privacy';
+  const doc = isPrivacy ? PRIVACY_DOCUMENT : TERMS_DOCUMENT;
   return (
     <main className="min-h-screen bg-[#09090b] px-5 py-10 text-zinc-100 sm:px-8">
       <div className="mx-auto max-w-2xl">
         <Link to="/aliados" className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
           <ArrowLeft className="h-4 w-4" /> Volver a Aliados
         </Link>
-        {!ALIADOS_LEGAL_APPROVED && (
-          <div role="note" className="mb-8 rounded-md border border-amber-200/30 bg-amber-200/[0.06] p-4 text-sm leading-6 text-amber-100">
-            <strong>Borrador pendiente de validación legal.</strong> Este texto es una propuesta y no constituye un documento definitivo. Faltan por confirmar el domicilio fiscal del responsable, los plazos de conservación, el procedimiento ARCO, la documentación fiscal y la ley aplicable.
-          </div>
-        )}
-        <h1 className="font-display text-3xl font-semibold text-white">
-          {isPrivacy ? 'Aviso de Privacidad del Programa Aliados' : 'Términos del Programa Aliados Charlitron'}
-        </h1>
-        <LegalSections sections={isPrivacy ? PRIVACY_SECTIONS : TERMS_SECTIONS} />
+        <h1 className="font-display text-3xl font-semibold text-white">{doc.title}</h1>
+        <p className="mt-2 text-sm text-zinc-400">{doc.subtitle}</p>
+        <LegalSections sections={doc.sections} />
         <p className="mt-10 border-t border-white/10 pt-5 text-xs leading-5 text-zinc-500">
           {isPrivacy ? (
             <>Para los datos que recabamos en el sitio fuera del programa, consulta <a href="/#legal-privacidad" target="_blank" rel="noopener noreferrer" className="text-amber-200 underline underline-offset-2">el aviso general</a>.</>
           ) : (
-            <>Consulta también el <Link to="/aliados/privacidad" className="text-amber-200 underline underline-offset-2">Aviso de Privacidad del programa</Link>.</>
+            <>Consulta también el <Link to="/aliados/privacidad" className="text-amber-200 underline underline-offset-2">Aviso Integral de Privacidad del programa</Link>.</>
           )}
         </p>
       </div>

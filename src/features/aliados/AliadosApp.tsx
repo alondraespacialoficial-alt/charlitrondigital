@@ -21,6 +21,10 @@ import { useAliadosRepository, useAllyData } from './useAliadosData';
 import type { AliadosRepository, Commission, Referral } from './aliadosRepository';
 import { COMMISSION_STATUS_LABELS, REFERRAL_STATUS_LABELS, errorText, formatDate, formatMoney, statusLabel } from './aliadosLabels';
 import { AllyActivationPage, AllyLegalPage, AllyRegistrationPage } from './AllyPublicPages';
+import { AllyAcceptanceScreen } from './AllyAcceptance';
+import { ACCEPTANCE_ROUTE, recordAcceptance, type AcceptanceClient } from './aliadosAcceptance';
+import { aliadosSupabase } from './aliadosSupabase';
+import { PRIVACY_VERSION, TERMS_VERSION } from './aliadosLegal';
 import { AlliesLanding } from './AllyLanding';
 
 type PanelTab = 'resumen' | 'recomendaciones' | 'comisiones';
@@ -66,19 +70,22 @@ function useAliadosMeta(path: string) {
     const isPrivacyPage = path === '/aliados/privacidad';
     const isRegisterPage = path === '/aliados/registrarse';
     const isAdminPage = path === '/aliados/admin';
+    const isAcceptancePage = path === ACCEPTANCE_ROUTE;
 
     applyPageMeta({
       title: isPublicPage
         ? 'Aliados Charlitron | Recomienda oportunidades de negocio'
         : isTermsPage
-          ? 'Términos del Programa Aliados (borrador) | Charlitron Digital'
+          ? `Términos y condiciones del programa Aliados v${TERMS_VERSION} | Charlitron Digital`
           : isPrivacyPage
-            ? 'Aviso de Privacidad del Programa Aliados (borrador) | Charlitron Digital'
+            ? `Aviso integral de privacidad de Aliados v${PRIVACY_VERSION} | Charlitron Digital`
             : isRegisterPage
               ? 'Quiero ser aliado | Charlitron Digital'
               : isAdminPage
                 ? 'Panel administrador | Charlitron Digital'
-                : 'Acceso de aliados | Charlitron Digital',
+                : isAcceptancePage
+                  ? 'Aceptación de condiciones | Charlitron Digital'
+                  : 'Acceso de aliados | Charlitron Digital',
       description: isPublicPage
         ? 'Recomienda negocios a Charlitron y recibe una comisión según el acuerdo cuando el proyecto se concrete y se cobre.'
         : isTermsPage
@@ -128,6 +135,7 @@ export function AliadosApp() {
   if (path === '/aliados/registrarse') return <AllyRegistrationPage />;
   if (path === '/aliados/activar') return <AllyActivationPage />;
   if (path === '/aliados/ingresar') return <PartnerLogin session={session} />;
+  if (path === ACCEPTANCE_ROUTE) return <AcceptanceGate session={session} onSignOut={handleSignOut} />;
   if (path === '/aliados/admin') return <AdminGate session={session} onSignOut={handleSignOut} />;
   if (path === '/aliados/panel') return <PanelGate session={session} onSignOut={handleSignOut} />;
   return <Navigate to="/aliados" replace />;
@@ -179,6 +187,8 @@ function PanelGate({ session, onSignOut }: { session: AliadosSession; onSignOut:
   if (destination === 'panel' && state.role.kind === 'ally') {
     return <PartnerDashboard displayName={state.role.displayName} onLogout={onSignOut} />;
   }
+  // Cuenta activa sin aceptacion vigente: nunca ve el panel; se la lleva a la pantalla de aceptacion.
+  if (destination === 'acceptance') return <Navigate to={ACCEPTANCE_ROUTE} replace />;
   if (destination === 'pending') {
     return <StatusScreen title="Tu cuenta está pendiente de aprobación" text="Charlitron revisará tu solicitud. Cuando esté aprobada podrás entrar a tu panel." onSignOut={onSignOut} />;
   }
@@ -193,6 +203,24 @@ function PanelGate({ session, onSignOut }: { session: AliadosSession; onSignOut:
     );
   }
   return <StatusScreen title="Tu cuenta no tiene acceso al programa" text="Si crees que es un error, contacta a Charlitron." onSignOut={onSignOut} />;
+}
+
+function AcceptanceGate({ session, onSignOut }: { session: AliadosSession; onSignOut: () => void }) {
+  const { state } = session;
+  if (state.status === 'ready' && destinationFor(state.role) === 'acceptance') {
+    const handleAccept = async (input: { terms: boolean; privacy: boolean }) => {
+      if (!aliadosSupabase) return 'El acceso no está configurado en esta vista previa.';
+      const result = await recordAcceptance(aliadosSupabase as unknown as AcceptanceClient, input);
+      if (!result.ok) return result.message;
+      // El panel se abre solo si la base confirma la aceptacion al volver a verificar el acceso.
+      await session.refresh();
+      return '';
+    };
+    return <AllyAcceptanceScreen onAccept={handleAccept} onSignOut={onSignOut} />;
+  }
+  if (state.status === 'ready' && destinationFor(state.role) === 'panel') return <Navigate to="/aliados/panel" replace />;
+  // Resto de casos (cargando, sin sesion, error, pendiente, pausado, admin o sin rol): mismas pantallas que el panel.
+  return <PanelGate session={session} onSignOut={onSignOut} />;
 }
 
 function PartnerLogin({ session }: { session: AliadosSession }) {

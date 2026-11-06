@@ -15,6 +15,7 @@ const production = { VERCEL: '1', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_RE
 test('only Production, Preview of the Aliados branch or local dev may use the Aliados project', () => {
   assert.equal(isAliadosAuthBuildAllowed(previewAliados), true);
   assert.equal(isAliadosAuthBuildAllowed({ ...previewAliados, VERCEL_GIT_COMMIT_REF: 'feat/aliados-registro-publico' }), true);
+  assert.equal(isAliadosAuthBuildAllowed({ ...previewAliados, VERCEL_GIT_COMMIT_REF: 'feat/aliados-aceptacion-electronica' }), true);
   assert.equal(isAliadosAuthBuildAllowed({}), true);
   assert.equal(isAliadosAuthBuildAllowed({ VERCEL: '1', VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'main' }), true);
   assert.equal(isAliadosAuthBuildAllowed({ VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'feat/portafolio-proyectos-v2' }), false);
