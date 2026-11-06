@@ -9,7 +9,7 @@ import { AllyActivationPage, AllyLegalPage, AllyRegistrationForm, AllyRegistrati
 import { LegalPage } from '../../components/LegalPage';
 import { LEGAL_ADDRESS_PUBLICATION_AUTHORIZED, LEGAL_FISCAL_ADDRESS, LEGAL_RESPONSIBLE_NAME } from '../../data/legalEntity';
 import { CONTACT_EMAIL } from '../../data/content';
-import { ALIADOS_LEGAL_APPROVED, LEGAL_PENDING, PRIVACY_SECTIONS, TERMS_SECTIONS } from './aliadosLegal';
+import { ALIADOS_LEGAL_APPROVED, LEGAL_DOCUMENTS_DATE, LEGAL_PENDING, PRIVACY_DOCUMENT, PRIVACY_SECTIONS, PRIVACY_VERSION, TERMS_DOCUMENT, TERMS_SECTIONS, TERMS_VERSION } from './aliadosLegal';
 
 const render = (element: ReturnType<typeof createElement>) => renderToStaticMarkup(createElement(MemoryRouter, null, element));
 
@@ -43,34 +43,61 @@ test('"Volver" ocupa su propia linea y el logotipo no se encima con el', () => {
   assert.equal(/aria-label="Volver a Aliados Charlitron" className="[^"]*inline-flex/.test(app), false);
 });
 
-test('mientras falten datos legales el registro sigue cerrado por codigo', () => {
+test('el registro publico sigue cerrado por codigo y los pendientes para operar con prospectos reales constan', () => {
+  assert.equal(ALIADOS_LEGAL_APPROVED, false);
   assert.ok(LEGAL_PENDING.length > 0);
-  if (ALIADOS_LEGAL_APPROVED) {
-    assert.equal(LEGAL_PENDING.length, 0, 'no se puede aprobar el texto con datos legales pendientes');
-    assert.ok(LEGAL_ADDRESS_PUBLICATION_AUTHORIZED, 'no se puede aprobar sin autorizacion para publicar el domicilio');
+  for (const topic of [/abogado/, /Constancia escrita/, /Canal ARCO/, /puesta a disposición del aviso al prospecto/, /consentimiento expreso/, /Plazos de conservación/, /Remisiones y transferencias/, /acuerdo individual de comisión/, /Documentación fiscal/, /Ley aplicable/]) {
+    assert.ok(LEGAL_PENDING.some((item) => topic.test(item)), `pendiente: ${topic}`);
   }
 });
 
-test('los textos legales cubren lo esencial y no inventan datos del responsable', () => {
+test('las paginas legales publican los documentos definitivos, completos y sin leyendas de borrador', () => {
   const text = JSON.stringify([...PRIVACY_SECTIONS, ...TERMS_SECTIONS]);
-  for (const topic of ['Responsable', 'Datos que recabamos', 'ARCO', 'Consentimiento', 'Conservación']) assert.match(text, new RegExp(topic));
-  for (const topic of ['Registro y aprobación', 'Ventas y comisiones', 'Conducta del aliado', 'Cambios y baja']) assert.match(text, new RegExp(topic));
+  assert.equal(PRIVACY_SECTIONS.length, 12, 'el aviso tiene 12 apartados');
+  assert.equal(TERMS_SECTIONS.length, 14, 'los terminos tienen 14 apartados');
   assert.equal(/RFC|CURP|idCIF|S\.A\. de C\.V\.|aliados@charlitron\.com|privacidad@charlitrondigital\.com/i.test(text), false);
 
-  const privacy = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(AllyLegalPage, { kind: 'privacy' })));
-  const terms = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(AllyLegalPage, { kind: 'terms' })));
-  assert.match(privacy, /Aviso de Privacidad del Programa Aliados/);
-  assert.match(terms, /Términos del Programa Aliados/);
-  assert.match(privacy, /Borrador pendiente de validación legal/);
-  assert.match(terms, /Borrador pendiente de validación legal/);
+  const privacy = render(createElement(AllyLegalPage, { kind: 'privacy' }));
+  const terms = render(createElement(AllyLegalPage, { kind: 'terms' }));
+  assert.match(privacy, /Aviso integral de privacidad/);
+  assert.match(privacy, /Aliados Charlitron · «Si nos refieres, ganas» · v1\.2 · 5 de noviembre de 2026\./);
+  assert.match(terms, /Términos y condiciones del programa/);
+  assert.match(terms, /Aliados Charlitron · «Si nos refieres, ganas» · v1\.0 · 5 de noviembre de 2026\./);
+  for (const html of [privacy, terms]) {
+    assert.equal(/borrador|Borrador|pendiente de validaci/i.test(html), false, 'sin leyendas de borrador');
+  }
+  for (const phrase of ['Identidad, alcance y responsable', 'Derechos ARCO', 'Invitación administrativa y aceptación de documentos', 'Contacto, cambios y vigencia']) assert.match(privacy, new RegExp(phrase));
+  for (const phrase of ['Comisiones: acuerdo individual necesario', 'Aceptación y condiciones de inicio', 'Cambios, avisos y controversias']) assert.match(terms, new RegExp(phrase));
+  assert.match(privacy, /20 días hábiles/);
+  assert.match(privacy, /sin atribuirle consentimiento por silencio/);
+  assert.match(terms, /Si no acepta, no debe comenzar a registrar recomendaciones/);
+});
+
+test('las paginas legales y las versiones del codigo coinciden con los documentos aprobados', () => {
+  assert.equal(TERMS_VERSION, '1.0');
+  assert.equal(PRIVACY_VERSION, '1.2');
+  assert.equal(LEGAL_DOCUMENTS_DATE, '2026-11-05');
+  assert.equal(TERMS_DOCUMENT.version, TERMS_VERSION);
+  assert.equal(PRIVACY_DOCUMENT.version, PRIVACY_VERSION);
 });
 
 test('las rutas nuevas estan registradas y el acceso enlaza al registro', () => {
   const app = readFileSync(new URL('./AliadosApp.tsx', import.meta.url), 'utf8');
-  for (const route of ['/aliados/registrarse', '/aliados/activar', '/aliados/privacidad', '/aliados/terminos', '/aliados/ingresar']) {
-    assert.match(app, new RegExp(`path === '${route}'`));
+  for (const route of ['/aliados/registrarse', '/aliados/activar', '/aliados/aceptar', '/aliados/privacidad', '/aliados/terminos', '/aliados/ingresar']) {
+    assert.match(app, route === '/aliados/aceptar' ? /path === ACCEPTANCE_ROUTE/ : new RegExp(`path === '${route}'`));
   }
   assert.match(app, /to="\/aliados\/registrarse"[^>]*>Solicita tu registro/);
+});
+
+test('"Quiero ser aliado" informa que el programa funciona por invitacion y la pagina de registro no ofrece formulario', () => {
+  const landing = render(createElement(AlliesLanding));
+  assert.match(landing, /solo por invitación/);
+  assert.match(landing, /funciona por invitación de Charlitron; el registro público está cerrado/);
+  assert.equal(/Registro gratuito/.test(landing), false);
+  const page = render(createElement(AllyRegistrationPage));
+  assert.match(page, /funciona por invitación/);
+  assert.match(page, /WhatsApp es solo un aviso complementario/);
+  assert.equal(/name="email"|Solicitar registro/.test(page), false);
 });
 
 test('la activacion sin configuracion o sin enlace no ofrece cambiar contrasenas', () => {
@@ -90,7 +117,7 @@ test('el responsable legal es Carlos Leonardo Álvarez Cedillo en el aviso gener
   const aliados = render(createElement(AllyLegalPage, { kind: 'privacy' }));
   assert.match(general, /Carlos Leonardo Álvarez Cedillo/);
   assert.match(aliados, /Carlos Leonardo Álvarez Cedillo/);
-  assert.match(render(createElement(AllyLegalPage, { kind: 'terms' })), /responsable legal es Carlos Leonardo Álvarez Cedillo/);
+  assert.match(render(createElement(AllyLegalPage, { kind: 'terms' })), /operado por Carlos Leonardo Álvarez Cedillo bajo la marca Charlitron Digital/);
 });
 
 test('José Adrián figura solo como administrador de Aliados; nunca como responsable ni con la razón social anterior', () => {
@@ -98,11 +125,11 @@ test('José Adrián figura solo como administrador de Aliados; nunca como respon
   assert.equal(/Jos(é|&eacute;) Adri/.test(general), false);
   assert.equal(/S\.A\. de C\.V\./.test(ALL_LEGAL_TEXT()), false);
   const aliados = render(createElement(AllyLegalPage, { kind: 'privacy' }));
-  assert.match(aliados, /administra José Adrián Álvarez Carlos, director comercial y administrador de Aliados Charlitron/);
+  assert.match(aliados, /José Adrián Álvarez Carlos es administrador comercial y operativo, sin sustituir al responsable/);
 });
 
 test('un solo correo de contacto y ninguno ficticio o sin confirmar', () => {
-  const emails = new Set((ALL_LEGAL_TEXT().match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? []).map((email) => email.toLowerCase()));
+  const emails = new Set((ALL_LEGAL_TEXT().match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? []).map((email) => email.toLowerCase().replace(/\.$/, '')));
   assert.deepEqual([...emails], [CONTACT_EMAIL]);
 });
 
@@ -112,7 +139,7 @@ test('el domicilio fiscal autorizado aparece solo en los dos avisos de privacida
   const general = render(createElement(LegalPage, { initialTab: 'privacidad', onBack: () => {} }));
   const aliados = render(createElement(AllyLegalPage, { kind: 'privacy' }));
   assert.ok(general.includes(LEGAL_FISCAL_ADDRESS ?? ''), 'aviso general');
-  assert.ok(aliados.includes(LEGAL_FISCAL_ADDRESS ?? ''), 'aviso de Aliados');
+  assert.match(aliados, /calle Lanzagorta 330, colonia San Sebastián, C\. P\. 78349, San Luis Potosí, San Luis Potosí, México/);
   assert.equal(/domicilio fiscal por confirmar/.test(aliados), false);
 
   const elsewhere = [
@@ -132,41 +159,27 @@ test('el domicilio fiscal autorizado aparece solo en los dos avisos de privacida
   assert.equal(/CURP|idCIF|RFC/i.test(LEGAL_FISCAL_ADDRESS ?? ''), false);
 });
 
-test('la autorizacion del domicilio ya no es pendiente, pero los demas pendientes legales se conservan', () => {
-  assert.equal(LEGAL_PENDING.some((item) => /domicilio fiscal/i.test(item) && /autorizaci/i.test(item)), false);
-  for (const topic of [/Constancia escrita/, /José Adrián/, /Canal de privacidad/, /ARCO/, /Conservación/, /Cancelación frente/, /Transferencias/, /personas recomendadas/, /Documentación fiscal/, /Acuerdo escrito/, /Plazos de aviso/, /Ley aplicable/, /Revisión y firma/]) {
-    assert.ok(LEGAL_PENDING.some((item) => topic.test(item)), `pendiente: ${topic}`);
-  }
-  assert.equal(LEGAL_PENDING.length, 13);
-  assert.equal(ALIADOS_LEGAL_APPROVED, false);
-});
+
 
 test('los tratamientos del aviso general y del aviso de Aliados permanecen separados', () => {
   const general = render(createElement(LegalPage, { initialTab: 'privacidad', onBack: () => {} }));
   assert.equal(/aliad|recomend|comisi/i.test(general), false, 'el aviso general no menciona el programa Aliados');
   const aliados = JSON.stringify(PRIVACY_SECTIONS);
-  assert.match(aliados, /independiente del aviso de privacidad general/);
-  assert.match(aliados, /Finalidades sobre tus datos como aliado/);
-  assert.match(aliados, /Finalidades sobre los datos de las personas que recomiendas/);
+  assert.match(aliados, /no sustituye el aviso general de los demás servicios de Charlitron Digital/);
 });
 
-test('las comisiones son montos acordados por proyecto: sin porcentajes fijos ni promesas', () => {
+test('las comisiones se acuerdan por proyecto: sin porcentajes ni promesas', () => {
   const terms = JSON.stringify(TERMS_SECTIONS);
-  assert.match(terms, /monto acordado por escrito para cada proyecto/);
-  assert.match(terms, /No hay porcentajes fijos ni ingresos garantizados/);
+  assert.match(terms, /No existe porcentaje general ni ingreso garantizado/);
+  assert.match(terms, /Cada comisión requiere acuerdo individual documentado/);
+  assert.match(terms, /Charlitron no garantiza ventas, aceptación de referidos ni ingresos/);
   assert.equal(/\d+\s?%/.test(terms), false);
 });
 
-test('conservacion y datos de referidos describen el comportamiento real y dejan pendiente lo no validado', () => {
+test('conservacion y datos de referidos: sin promesa de eliminacion inmediata ni propiedad de datos', () => {
   const privacy = JSON.stringify(PRIVACY_SECTIONS);
-  assert.match(privacy, /rechazadas se conservan mientras no se defina su plazo de eliminación/);
-  assert.match(privacy, /no el plazo de conservación/);
-  assert.equal(/7 días/.test(privacy), false);
-  assert.equal(/se eliminar(á|an)|eliminaremos|se borra|eliminación automática|a los \d+ días se/i.test(JSON.stringify([...PRIVACY_SECTIONS, ...TERMS_SECTIONS])), false, 'no se promete eliminacion automatica');
-  assert.ok(LEGAL_PENDING.some((item) => /no debe prometerse eliminación automática/.test(item)));
-  assert.match(privacy, /no se eliminan por su naturaleza contable/);
+  assert.match(privacy, /No se ofrece eliminación inmediata o automática de todos los registros/);
+  assert.match(privacy, /Una invitación no equivale a aceptación de términos/);
+  assert.match(JSON.stringify(TERMS_SECTIONS), /Ningún aliado tendrá propiedad sobre datos personales o prospectos/);
   assert.equal(/propiedad de Charlitron/i.test(JSON.stringify([...PRIVACY_SECTIONS, ...TERMS_SECTIONS])), false);
-  for (const topic of [/Transferencias/, /ARCO/, /Conservación/, /Documentación fiscal/]) {
-    assert.ok(LEGAL_PENDING.some((item) => topic.test(item)), `pendiente: ${topic}`);
-  }
 });

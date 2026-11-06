@@ -81,8 +81,25 @@ test('la activacion de cuenta solo usa setSession y updateUser con la contrasena
   assert.equal(/auth\.admin|inviteUserByEmail|user_metadata|raw_user_meta_data|account_roles/.test(text), false);
 });
 
-test('el acceso al panel de aliado sigue dependiendo del rol en la base, tambien tras activar la cuenta', () => {
+test('tras activar la cuenta el aliado va a la aceptacion electronica, nunca directo al panel', () => {
   const page = sources.find((source) => source.name === 'AllyPublicPages.tsx')?.text ?? '';
-  assert.match(page, /navigate\('\/aliados\/panel'/);
+  assert.match(page, /navigate\(ACCEPTANCE_ROUTE/);
+  assert.equal(/navigate\('\/aliados\/panel'/.test(page), false, 'la activacion no abre el panel');
   assert.equal(/AliadosAdminPanel|PartnerDashboard/.test(page), false, 'la pagina de activacion no renderiza paneles');
+});
+
+test('la aceptacion solo usa las dos funciones de la base y nunca escribe tablas ni envia identidad', () => {
+  const text = sources.find((source) => source.name === 'aliadosAcceptance.ts')?.text ?? '';
+  assert.ok(text.length > 0);
+  assert.equal(/\.from\(\s*['"`]/.test(text), false);
+  const rpcs = [...text.matchAll(/\.rpc\(\s*['"`]([a-z_]+)['"`]/g)].map((match) => match[1]);
+  assert.deepEqual([...new Set(rpcs)].sort(), ['ally_accept_terms', 'ally_acceptance_state']);
+  assert.equal(/user_id|p_user|accepted_at|source|action|ip_address/.test(text.replace(/\/\/.*$/gm, '')), false, 'el navegador no envia identidad, fecha ni origen');
+});
+
+test('el panel del aliado solo se renderiza desde PanelGate, tras destination === panel', () => {
+  const app = sources.find((source) => source.name === 'AliadosApp.tsx')?.text ?? '';
+  const uses = app.match(/<PartnerDashboard\b/g) ?? [];
+  assert.equal(uses.length, 1);
+  assert.match(app, /destination === 'panel' && state\.role\.kind === 'ally'\) \{\s*return <PartnerDashboard/);
 });

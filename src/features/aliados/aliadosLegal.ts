@@ -1,34 +1,33 @@
 import { CONTACT_EMAIL } from '../../data/content';
-import {
-  ALIADOS_ADMIN_NAME,
-  ALIADOS_ADMIN_ROLE,
-  LEGAL_ADDRESS_LINE,
-  LEGAL_ADDRESS_PUBLICATION_AUTHORIZED,
-  LEGAL_RESPONSIBLE_NAME,
-  LEGAL_RESPONSIBLE_ROLE,
-} from '../../data/legalEntity';
 
-// Mientras sea false el formulario de registro permanece cerrado aunque la base lo abra.
-// Solo debe pasar a true cuando LEGAL_PENDING este vacio y un responsable legal haya aprobado los textos.
+// El registro publico NO se abre desde el codigo: el programa funciona solo por invitacion administrativa.
+// Esta bandera debe seguir en false. Aunque la base tuviera registration_open = true, la pagina publica de
+// registro no mostraria el formulario mientras esta bandera sea false (doble llave).
 export const ALIADOS_LEGAL_APPROVED = false;
 
 export const ALIADOS_PRIVACY_CONTACT = CONTACT_EMAIL;
 
-// Puntos que requieren revision juridica o datos que aun no constan. No deben resolverse por suposicion.
+// Versiones vigentes de los documentos que el aliado acepta o confirma en la pantalla de aceptacion electronica.
+// Deben coincidir con ally_legal_documents (migracion 0006); una prueba lo verifica.
+export const TERMS_VERSION = '1.0';
+export const PRIVACY_VERSION = '1.2';
+export const LEGAL_DOCUMENTS_DATE = '2026-11-05';
+export const LEGAL_DOCUMENTS_DATE_LABEL = '5 de noviembre de 2026';
+export const LEGAL_PROGRAM_LABEL = 'Aliados Charlitron · «Si nos refieres, ganas»';
+
+// Puntos que siguen pendientes para operar con prospectos reales. Los textos legales ya son los aprobados por el
+// responsable; esto lista lo que no se resuelve con texto en el sitio. No deben resolverse por suposicion.
 export const LEGAL_PENDING: readonly string[] = [
+  'Revisión y validación de abogado de los dos documentos (Aviso Integral de Privacidad v1.2 y Términos y Condiciones v1.0); constan como aprobados por el responsable, no como revisados por un abogado.',
   'Constancia escrita de la designación de Carlos Leonardo Álvarez Cedillo como titular fiscal y responsable legal, y de su aceptación.',
-  'Relación de José Adrián Álvarez Carlos con el tratamiento de datos (administra el programa): confirmar si actúa como personal del responsable o como encargado, y ajustar la redacción.',
-  'Canal de privacidad y ARCO: nadrian18@gmail.com es el correo propuesto; confirmar que es el canal oficial del responsable, ya que corresponde al administrador del programa.',
-  'Procedimiento, medio y plazos para ejercer derechos ARCO y revocar el consentimiento; alcance de derechos adicionales (portabilidad, limitación) que mencionaba el borrador anterior.',
-  'Conservación: plazos definitivos y mecanismo de eliminación. Hoy el sistema no elimina nada automáticamente: las solicitudes rechazadas se conservan sin plazo definido (los 30 días son solo el enfriamiento antes de aceptar una nueva solicitud del mismo correo). Los plazos propuestos para aliados (vigencia + 3 años) y recomendaciones (vigencia + 1 año) no están validados, y no debe prometerse eliminación automática hasta implementarla.',
-  'Cancelación frente a registros inmutables: ventas, comisiones, cobros y auditoría no pueden borrarse por diseño; definir qué se bloquea, por cuánto tiempo y cómo se informa al titular.',
-  'Transferencias y encargados: confirmar la redacción sobre Supabase y Vercel (posible tratamiento fuera de México) y si se requieren cláusulas o avisos adicionales.',
-  'Datos de las personas recomendadas: cómo se les informa del tratamiento al ser contactadas y el alcance de la autorización que declara el aliado.',
-  'Documentación fiscal: comprobantes y retenciones por el pago de comisiones a aliados, y facturación de los cobros a nombre del titular fiscal.',
-  'Acuerdo escrito de comisión por proyecto: formato, contenido mínimo y quién lo firma.',
-  'Plazos de aviso previo para cambios del programa o terminación (el borrador anterior proponía 48 h y 30 días sin validar).',
-  'Ley aplicable, jurisdicción y tribunales competentes; aplicabilidad de GDPR/CCPA.',
-  'Revisión y firma de abogado, y fecha de vigencia del aviso general, del aviso de Aliados y de los términos.',
+  'Canal ARCO: nadrian18@gmail.com pertenece al administrador del programa; confirmar que es el canal oficial del responsable y tener operando el procedimiento interno de atención ARCO (no se publica en este repositorio).',
+  'Mecanismo y evidencia de la puesta a disposición del aviso al prospecto recomendado y de sus oposiciones (apartado 5 del Aviso): aún no existe en la aplicación; el procedimiento interno de prospectos no se publica en este repositorio.',
+  'Mecanismo de consentimiento expreso, separado de la aceptación de términos, para datos fiscales y bancarios y para comunicaciones secundarias (apartados 4 y 8): no se implementa en esta versión. La casilla del aviso solo confirma que estuvo a disposición.',
+  'Plazos de conservación y bloqueo por categoría de datos, y tratamiento de bitácoras y respaldos al atender cancelaciones (apartado 9): sin plazos definitivos y sin eliminación automática.',
+  'Remisiones y transferencias: confirmar los acuerdos con Supabase, Vercel y Resend y si hay tratamiento fuera de México (apartado 7).',
+  'Formato y contenido mínimo del acuerdo individual de comisión por proyecto, y quién lo firma (apartado 6 de los Términos).',
+  'Documentación fiscal: comprobantes (CFDI) y retenciones por el pago de comisiones, y facturación de los cobros (apartado 8 de los Términos).',
+  'Ley aplicable y autoridades competentes: los Términos las remiten a la legislación mexicana aplicable; confirmar con el abogado.',
 ];
 
 export interface LegalSection {
@@ -37,152 +36,221 @@ export interface LegalSection {
   items?: string[];
 }
 
-const RESPONSIBLE_PARAGRAPH = `${LEGAL_RESPONSIBLE_NAME}, ${LEGAL_RESPONSIBLE_ROLE}. Domicilio: ${LEGAL_ADDRESS_LINE}${
-  LEGAL_ADDRESS_PUBLICATION_AUTHORIZED ? '' : ' (domicilio fiscal por confirmar)'
-}.`;
+export interface LegalDocument {
+  type: 'privacy' | 'terms';
+  version: string;
+  effectiveDate: string;
+  title: string;
+  subtitle: string;
+  sections: readonly LegalSection[];
+}
 
+// Textos aprobados por Carlos Leonardo Álvarez Cedillo, fechados el 5 de noviembre de 2026.
+// NO editar el contenido: cualquier cambio exige una nueva version y una nueva fila en ally_legal_documents.
 export const PRIVACY_SECTIONS: readonly LegalSection[] = [
   {
-    title: 'Responsable',
+    title: 'Identidad, alcance y responsable',
     paragraphs: [
-      RESPONSIBLE_PARAGRAPH,
-      `El programa lo administra ${ALIADOS_ADMIN_NAME}, ${ALIADOS_ADMIN_ROLE}.`,
-      `Contacto para temas de privacidad: ${CONTACT_EMAIL}`,
+      'Carlos Leonardo Álvarez Cedillo, persona física que opera comercialmente bajo la marca Charlitron Digital, con domicilio en calle Lanzagorta 330, colonia San Sebastián, C. P. 78349, San Luis Potosí, San Luis Potosí, México. José Adrián Álvarez Carlos es administrador comercial y operativo, sin sustituir al responsable.',
+      'Este aviso es específico del programa Aliados Charlitron y no sustituye el aviso general de los demás servicios de Charlitron Digital. Se dirige a solicitantes, personas invitadas, aliados vigentes o dados de baja, personas físicas de contacto de prospectos y personas que ejercen derechos sobre sus datos.',
     ],
   },
   {
-    title: 'Alcance de este aviso',
+    title: 'Datos personales tratados y su procedencia',
     paragraphs: [
-      'Este aviso aplica solo al programa Aliados Charlitron. Es independiente del aviso de privacidad general del sitio, que trata los datos de quienes solicitan información o cotizaciones, y no modifica sus tratamientos ni finalidades.',
+      'De solicitantes y aliados: nombre completo, correo electrónico, teléfono o WhatsApp y ciudad, cuando se capture; datos de autenticación y sesión; origen de alta, estado de autorización, fecha y versión de aceptaciones efectivamente registradas; identificadores de cuenta y registros de acceso, seguridad y auditoría. El registro público actualmente está cerrado; en invitaciones administrativas, nombre y correo son obligatorios y teléfono y ciudad pueden ser opcionales.',
+      'Para la operación: recomendaciones, datos de contacto comercial, comunicaciones y notas pertinentes, ventas, cobros, acuerdos, importes de comisiones, referencias de pagos y registros de auditoría. Para pagos de comisiones, cuando sean necesarios y mediante los mecanismos legalmente aplicables, podrán solicitarse datos fiscales y bancarios por medios indicados directamente a la persona interesada.',
+      'De prospectos recomendados: nombre, teléfono y/o correo cuando se proporcione, ciudad y negocio u organización. Esos datos pueden llegar indirectamente por un aliado. No se solicitan regularmente datos personales sensibles; la información no necesaria será evaluada para supresión o tratamiento legalmente procedente.',
     ],
   },
   {
-    title: 'Datos que recabamos',
-    items: [
-      'Solicitud de registro: nombre completo, correo electrónico, WhatsApp, ciudad y la fecha y hora en que aceptas este aviso y los términos.',
-      'Cuenta de aliado: correo y contraseña. La contraseña la gestiona el servicio de autenticación y Charlitron no puede verla.',
-      'Recomendaciones: nombre, correo, teléfono, ciudad y organización de las personas o negocios que recomiendas. Son datos de terceros que nos entregas.',
-      'Operación del programa: ventas, cobros, comisiones y pagos asociados a tus recomendaciones, y el registro de cambios (quién, cuándo y qué cambió).',
-    ],
-  },
-  {
-    title: 'Finalidades sobre tus datos como aliado',
-    items: [
-      'Revisar y gestionar tu solicitud de registro.',
-      'Crear y mantener tu cuenta y permitirte registrar recomendaciones y consultar su avance.',
-      'Registrar y pagar las comisiones acordadas y comunicarte cambios del programa.',
-      'Mantener la seguridad, la auditoría y el cumplimiento de obligaciones legales, administrativas y fiscales del programa.',
-    ],
-  },
-  {
-    title: 'Finalidades sobre los datos de las personas que recomiendas',
-    items: [
-      'Contactar a la persona o negocio recomendado para ofrecerle servicios de Charlitron Digital.',
-      'Dar seguimiento a la recomendación, detectar recomendaciones repetidas y relacionarla con una venta y su comisión.',
-      'No se usan para otros fines ni se comparten con otros aliados.',
-    ],
-  },
-  {
-    title: 'Consentimiento',
+    title: 'Finalidades indispensables',
     paragraphs: [
-      'Al marcar la casilla de aceptación en el formulario confirmas que leíste este aviso y los Términos del Programa Aliados, y autorizas el tratamiento de tus datos para las finalidades sobre tus datos como aliado.',
-      'Antes de recomendar a alguien, la plataforma te pide confirmar que esa persona autorizó compartir sus datos con Charlitron. Eres responsable de contar con esa autorización.',
+      'Invitar, identificar, verificar y gestionar solicitudes y perfiles; autenticar accesos; aplicar permisos y medidas de seguridad; recibir y evaluar recomendaciones, comprobar duplicados y gestionar seguimiento; comunicarse en relación con oportunidades de servicio; documentar proyectos, ventas, pagos de clientes, comisiones y sus pagos; prevenir usos no autorizados; atender aclaraciones, derechos ARCO, controversias y obligaciones legales, fiscales, contables y contractuales.',
+      'Los datos de prospectos se emplearán para evaluar la referencia, establecer contacto comercial inicial cuando proceda y dar seguimiento solo en la medida lícita y necesaria. Recibir una recomendación no autoriza por sí solo campañas publicitarias indiscriminadas.',
     ],
   },
   {
-    title: 'Con quién compartimos tus datos',
+    title: 'Finalidades opcionales y oposición',
     paragraphs: [
-      'Solo puede verlos el personal autorizado de Charlitron. Un aliado nunca ve los datos de otros aliados ni de sus recomendaciones. No los compartimos con terceros sin tu autorización por escrito, salvo requerimiento de una autoridad competente.',
-      'Para operar el programa usamos proveedores tecnológicos de base de datos, autenticación y alojamiento (Supabase y Vercel).',
+      'Las comunicaciones promocionales o invitaciones no indispensables para el funcionamiento del programa se tratarán como finalidades secundarias y requerirán el mecanismo de elección o consentimiento que corresponda. No se enviarán comunicaciones promocionales opcionales sin contar con el fundamento y mecanismo legal correspondiente. La negativa no impedirá las funciones necesarias del programa.',
     ],
   },
   {
-    title: 'Tus derechos',
+    title: 'Datos proporcionados por aliados y aviso al prospecto',
     paragraphs: [
-      `Puedes solicitar el Acceso, la Rectificación, la Cancelación y la Oposición (derechos ARCO) respecto de tus datos escribiendo a ${CONTACT_EMAIL} con tu nombre y el detalle de tu petición. El procedimiento y los plazos de respuesta se confirmarán en la versión final de este aviso.`,
+      'El aliado solo deberá remitir información mínima obtenida lícitamente y declarará la procedencia de la referencia. Esa declaración no sustituye la obligación del responsable de contar con fundamento para el tratamiento ni la entrega oportuna del aviso. Charlitron pondrá a disposición del prospecto la información sobre responsable, finalidades y mecanismos de privacidad, atendiendo las reglas aplicables a datos obtenidos indirectamente.',
+      'Charlitron documentará la puesta a disposición o comunicación del aviso al prospecto, así como cualquier oposición, conforme a la normativa aplicable y sin atribuirle consentimiento por silencio.',
     ],
   },
   {
-    title: 'Conservación',
-    items: [
-      'Las solicitudes rechazadas se conservan mientras no se defina su plazo de eliminación. Tras un rechazo, el mismo correo no puede volver a solicitar el registro durante 30 días; es una medida contra el abuso, no el plazo de conservación.',
-      'Los datos de tu cuenta y de tus recomendaciones se conservan mientras participes en el programa y el tiempo necesario para cumplir obligaciones legales; los plazos exactos están pendientes de validación legal.',
-      'Los registros de ventas, cobros, comisiones y auditoría no se eliminan por su naturaleza contable y de control; el alcance de tu derecho de cancelación respecto de ellos está pendiente de validación legal.',
+    title: 'Invitación administrativa y aceptación de documentos',
+    paragraphs: [
+      'La invitación y aprobación de un aliado no prueban aceptación de términos ni consentimiento para datos. Una invitación no equivale a aceptación de términos. El acceso a funciones comerciales requerirá un acto afirmativo verificable que permita identificar al aliado, la fecha y la versión aceptada.',
     ],
   },
   {
-    title: 'Cambios a este aviso',
-    paragraphs: ['Podemos actualizar este aviso por requerimientos legales u operativos. Publicaremos los cambios en esta misma página.'],
+    title: 'Proveedores tecnológicos, remisiones y transferencias',
+    paragraphs: [
+      'Para prestar el servicio se utiliza infraestructura tecnológica de Supabase y Vercel, así como servicios de envío de correo electrónico de Resend. Estos proveedores pueden tratar datos técnicos o personales por cuenta del responsable según sus servicios y acuerdos. Se distinguirán las remisiones a personas encargadas de las transferencias a responsables distintos.',
+      'Las comunicaciones de datos a terceros distintos de los encargados se sujetarán a los requisitos y excepciones establecidos por la ley. Las personas titulares podrán solicitar información sobre su tratamiento mediante el correo de privacidad.',
+    ],
+  },
+  {
+    title: 'Sesiones, almacenamiento técnico y seguridad',
+    paragraphs: [
+      'La plataforma utiliza almacenamiento técnico necesario para conservar la sesión y proteger el acceso de las cuentas. Otras tecnologías del sitio, cuando resulten aplicables, se informarán conforme a la normativa correspondiente.',
+      'La plataforma aplica controles de acceso basados en permisos. El responsable debe mantener medidas administrativas, técnicas y físicas proporcionales a riesgos, con confidencialidad, revisión de incidentes y comunicación de vulneraciones cuando legalmente proceda. No se garantiza seguridad absoluta.',
+    ],
+  },
+  {
+    title: 'Conservación, bloqueo y cancelación',
+    paragraphs: [
+      'Los datos se conservarán solamente por las finalidades y obligaciones legales aplicables, con revisión por categoría y periodo de bloqueo cuando corresponda. Una cuenta suspendida, solicitud rechazada o baja no implica eliminación instantánea de todos los registros.',
+      'Las ventas, cobros, comisiones y bitácoras pueden estar sujetos a conservación y restricciones técnicas. Los registros de auditoría y respaldos se revisarán al atender solicitudes de cancelación, bloqueo o supresión, atendiendo los límites legales y técnicos aplicables. No se ofrece eliminación inmediata o automática de todos los registros.',
+    ],
+  },
+  {
+    title: 'Derechos ARCO',
+    paragraphs: [
+      'La persona titular o su representante podrán solicitar acceso, rectificación, cancelación u oposición al correo nadrian18@gmail.com. Incluirán: nombre y medio para recibir notificaciones, elementos para acreditar identidad o representación, identificación de los datos cuando corresponda, derecho solicitado y información que facilite su localización. Para rectificación, describirán cambios y sustento documental.',
+      'El responsable comunicará su determinación en un máximo de 20 días hábiles desde la recepción y, si procede, la hará efectiva dentro de los 15 días hábiles siguientes a la comunicación. Los periodos pueden ampliarse una sola vez por uno igual si se justifica. La cancelación podrá dar lugar a bloqueo antes de supresión, y se aplicarán las excepciones legales pertinentes. La atención es gratuita salvo costos permitidos de reproducción o envío.',
+    ],
+  },
+  {
+    title: 'Revocación y límites de uso o divulgación',
+    paragraphs: [
+      'La persona titular podrá solicitar revocación del consentimiento cuando proceda y limitación de uso o divulgación a nadrian18@gmail.com; la revocación no es retroactiva ni elimina por sí sola deberes legales pendientes. La exclusión de comunicaciones secundarias se atenderá por dicho canal.',
+    ],
+  },
+  {
+    title: 'Contacto, cambios y vigencia',
+    paragraphs: [
+      'Canal ARCO: nadrian18@gmail.com. Asunto sugerido: “Privacidad / Derechos ARCO - Aliados Charlitron”. El responsable atenderá estas solicitudes a través del canal señalado, directamente o mediante el personal autorizado.',
+      'Las modificaciones se informarán en https://www.charlitrondigital.com/aliados/privacidad, con identificación de versión y fecha; las modificaciones que exijan nuevo consentimiento no lo sustituyen con la mera publicación.',
+    ],
   },
 ];
 
 export const TERMS_SECTIONS: readonly LegalSection[] = [
   {
-    title: 'Qué es el programa',
+    title: 'Naturaleza y participantes',
     paragraphs: [
-      `Aliados Charlitron es un programa de recomendación de Charlitron Digital, operación cuyo responsable legal es ${LEGAL_RESPONSIBLE_NAME}, y administrado por ${ALIADOS_ADMIN_NAME}. No genera relación laboral, de representación ni sociedad, y no implica exclusividad.`,
+      'El programa “Aliados Charlitron - Si nos refieres, ganas” es un esquema privado de recomendaciones comerciales operado por Carlos Leonardo Álvarez Cedillo bajo la marca Charlitron Digital. Durante la etapa inicial se participa exclusivamente por invitación y aprobación administrativa. Los presentes términos serán aplicables desde su aceptación documentada por cada participante.',
     ],
   },
   {
-    title: 'Registro y aprobación',
-    items: [
-      'El registro es voluntario y requiere información veraz.',
-      'Cada solicitud la revisa Charlitron de forma manual y puede aprobarla o rechazarla.',
-      'La aprobación no garantiza recomendaciones, ventas ni pagos.',
-      'Si se aprueba, recibirás una invitación por correo para crear tu contraseña. El enlace tiene vigencia limitada.',
-    ],
-  },
-  {
-    title: 'Recomendación válida y duplicados',
-    items: [
-      'Debe tratarse de un negocio o persona con interés real y que haya aceptado ser contactado. Charlitron decide si atiende cada recomendación.',
-      'Si más de un aliado registra al mismo contacto, el sistema toma como referencia la primera recomendación y Charlitron decide manualmente cómo se atienden las demás.',
-    ],
-  },
-  {
-    title: 'Datos de los referidos',
-    items: [
-      'Antes de recomendar a alguien debes contar con su autorización para compartir sus datos con Charlitron, y la plataforma te pedirá confirmarla.',
-      'Charlitron usa esos datos para contactar a la persona, dar seguimiento y vincularla con una venta y su comisión, conforme al Aviso de Privacidad del programa.',
-      'Desde tu panel solo ves el estado de tus recomendaciones y tus comisiones; no ves montos de venta, cobros internos ni notas administrativas.',
-    ],
-  },
-  {
-    title: 'Ventas y comisiones',
-    items: [
-      'La comisión es un monto acordado por escrito para cada proyecto. No hay porcentajes fijos ni ingresos garantizados.',
-      'La parte liberable de la comisión es proporcional a lo que Charlitron cobra al cliente y nunca excede el monto acordado.',
-      'Las comisiones se asignan, autorizan y pagan de forma manual; la asignación no equivale a la autorización. Los pagos pueden hacerse en parcialidades por el medio que se acuerde.',
-      'Si un cobro se revierte, la comisión liberable se reduce en consecuencia.',
-      'Charlitron informará los requisitos de documentación fiscal aplicables antes de pagar una comisión.',
-    ],
-  },
-  {
-    title: 'Conducta del aliado',
-    items: [
-      'No enviar spam ni hacer declaraciones engañosas sobre servicios o precios.',
-      'No usar el nombre de Charlitron fuera de lo acordado ni interferir en la negociación con el referido.',
-      'Mantener la confidencialidad de clientes, montos y condiciones internas.',
-    ],
-  },
-  {
-    title: 'Cambios y baja',
+    title: 'Elegibilidad y acceso',
     paragraphs: [
-      'Charlitron puede modificar el programa o dar de baja cuentas, por ejemplo por incumplimiento o actividad fraudulenta. El aliado puede pedir su baja en cualquier momento. Las comisiones ya devengadas se respetan conforme al acuerdo del proyecto.',
+      'El programa es gratuito y no exige exclusividad, cuotas de referidos ni volumen mínimo. La persona interesada deberá proporcionar información verdadera y mantener sus datos de contacto actualizados. Charlitron podrá validar identidad y pertinencia comercial, aprobar o rechazar solicitudes y suspender cuentas cuando exista una causa razonable documentada. El registro público permanece cerrado.',
     ],
   },
   {
-    title: 'Limitación de responsabilidad',
+    title: 'Función del aliado y límites de representación',
     paragraphs: [
-      'Charlitron no garantiza recibir recomendaciones ni que estas se conviertan en ventas, y el aliado asume el riesgo propio de este modelo.',
+      'El aliado identifica y recomienda oportunidades comerciales, sin facultad para representar legalmente a Charlitron, pactar precios, ofrecer descuentos, emitir facturas, firmar contratos, garantizar resultados ni recibir dinero de clientes por cuenta de Charlitron, salvo autorización previa y específica por escrito. Charlitron conserva la negociación, cotización, ejecución, facturación y cobranza. El aliado no puede usar la marca, logos ni materiales más allá de lo autorizado.',
     ],
   },
   {
-    title: 'Contacto',
-    paragraphs: [`Dudas sobre estos términos: ${CONTACT_EMAIL}`],
+    title: 'Referidos adecuados y licitud de datos',
+    paragraphs: [
+      'El aliado debe registrar únicamente prospectos con datos obtenidos y compartidos lícitamente; no enviará bases compradas, datos sensibles, información íntima ni contactos obtenidos por engaño. La declaración de autorización no exonera al responsable de sus obligaciones de privacidad. Charlitron podrá rechazar información incompleta, improcedente, ilícita, engañosa o respecto de la cual el prospecto se oponga a su tratamiento.',
+    ],
   },
   {
-    title: 'Ley aplicable',
-    paragraphs: ['Pendiente de definir por el responsable legal.'],
+    title: 'Registro, prioridad y duplicados',
+    paragraphs: [
+      'Una recomendación queda sometida a validación y no asegura aceptación ni comisión. Se considerarán datos de contacto verificables, oportunidad específica, fecha de registro y relaciones comerciales previas. Cuando exista duplicidad, se usará el primer registro válido como antecedente y Charlitron decidirá los casos posteriores mediante revisión administrativa razonada; se documentará la decisión. Ningún aliado tendrá propiedad sobre datos personales o prospectos.',
+    ],
+  },
+  {
+    title: 'Comisiones: acuerdo individual necesario',
+    paragraphs: [
+      'No existe porcentaje general ni ingreso garantizado. Cada comisión requiere acuerdo individual documentado, identificando aliado, prospecto/proyecto, importe fijo o fórmula inequívoca, alcance, condiciones para generarse, base de cálculo, devoluciones, impuestos, plazos y medios de pago. Registrar un referido o concretar una venta no crea por sí mismo un derecho a comisión. No se presume un acuerdo económico por aparecer una oportunidad en el panel.',
+    ],
+  },
+  {
+    title: 'Cobros parciales, pagos y devoluciones',
+    paragraphs: [
+      'Cuando así se acuerde individualmente, la comisión liberable se calculará conforme al importe efectivamente cobrado del cliente y las condiciones pactadas, sin exceder el importe total acordado. Se podrán reconocer cobros parciales. Los pagos al aliado requerirán autorización y requisitos fiscales aplicables. Si hay cancelación, devolución, contracargo o reducción de cobro, se aplicará el mecanismo definido en el acuerdo individual y se registrará cualquier corrección. No hay obligación de pagar importes no liberados.',
+    ],
+  },
+  {
+    title: 'Datos fiscales, medios de pago y gastos',
+    paragraphs: [
+      'Cuando sea necesario efectuar una comisión se podrán solicitar los datos fiscales y bancarios imprescindibles, a través de un canal identificado y protegido, sujeto a aviso de privacidad y consentimiento aplicable. No hay reembolso de gastos, viáticos o inversiones del aliado salvo acuerdo escrito previo. El tratamiento fiscal concreto y la procedencia de CFDI o retenciones serán revisados según la situación de las partes.',
+    ],
+  },
+  {
+    title: 'Confidencialidad, conducta y comunicación',
+    paragraphs: [
+      'El aliado guardará reserva de propuestas, precios no públicos, clientes, credenciales y materiales internos. No realizará spam, afirmaciones engañosas, promesas de ingresos, prácticas discriminatorias, acoso ni uso no autorizado de datos. Evitará divulgar información de otros aliados y notificará accesos o contactos irregulares al administrador.',
+    ],
+  },
+  {
+    title: 'Panel, errores y seguridad',
+    paragraphs: [
+      'El acceso es personal y está sujeto a autenticación y permisos. El aliado se compromete a proteger sus credenciales y reportar usos no autorizados. La información visible en el panel es administrativa y puede estar sujeta a conciliación documental. Los errores y ajustes de ventas, cobros o comisiones deberán corregirse por los procedimientos autorizados con trazabilidad.',
+    ],
+  },
+  {
+    title: 'Suspensión, baja y efectos',
+    paragraphs: [
+      'Charlitron podrá suspender o dar de baja a un aliado por incumplimiento, datos falsos, abuso de la marca, divulgación indebida, fraude, violación de privacidad o riesgos graves. También podrá terminar la participación sin exclusividad, comunicando las condiciones aplicables. Una baja no extingue automáticamente comisiones ya devengadas y debidamente acreditadas; se revisarán conforme al acuerdo individual, ni produce la supresión inmediata de registros sujetos a obligaciones legales.',
+    ],
+  },
+  {
+    title: 'Relación jurídica y ausencia de garantía',
+    paragraphs: [
+      'Las partes pretenden una relación independiente de colaboración por recomendaciones comerciales, sin salario, horario impuesto, subordinación ni representación general. Esta cláusula no impide la aplicación de normas laborales o fiscales si los hechos de una relación concreta configuran sus elementos. Charlitron no garantiza ventas, aceptación de referidos ni ingresos.',
+    ],
+  },
+  {
+    title: 'Cambios, avisos y controversias',
+    paragraphs: [
+      'Las nuevas versiones de términos se identificarán con fecha y número. Los cambios sustanciales se comunicarán y, cuando corresponda, requerirán nueva aceptación antes de continuar operando. Las controversias se procurarán resolver mediante comunicación documentada, sin renuncia a derechos irrenunciables. La ley aplicable será la mexicana y las autoridades competentes serán las que correspondan conforme a la legislación aplicable.',
+    ],
+  },
+  {
+    title: 'Aceptación y condiciones de inicio',
+    paragraphs: [
+      'La invitación o aprobación administrativa no equivale a aceptar términos. Antes de operar, el aliado deberá acceder a los documentos completos y realizar aceptación afirmativa registrando cuenta, fecha, versión y evidencia técnica. Si no acepta, no debe comenzar a registrar recomendaciones.',
+    ],
   },
 ];
+
+export const PRIVACY_DOCUMENT: LegalDocument = {
+  type: 'privacy',
+  version: PRIVACY_VERSION,
+  effectiveDate: LEGAL_DOCUMENTS_DATE,
+  title: 'Aviso integral de privacidad',
+  subtitle: `${LEGAL_PROGRAM_LABEL} · v${PRIVACY_VERSION} · ${LEGAL_DOCUMENTS_DATE_LABEL}.`,
+  sections: PRIVACY_SECTIONS,
+};
+
+export const TERMS_DOCUMENT: LegalDocument = {
+  type: 'terms',
+  version: TERMS_VERSION,
+  effectiveDate: LEGAL_DOCUMENTS_DATE,
+  title: 'Términos y condiciones del programa',
+  subtitle: `${LEGAL_PROGRAM_LABEL} · v${TERMS_VERSION} · ${LEGAL_DOCUMENTS_DATE_LABEL}.`,
+  sections: TERMS_SECTIONS,
+};
+
+export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [TERMS_DOCUMENT, PRIVACY_DOCUMENT];
+
+// Representacion canonica (orden y espacios fijos) sobre la que se calcula la huella SHA-256 de cada version.
+export function canonicalLegalContent(doc: LegalDocument): string {
+  return JSON.stringify({
+    type: doc.type,
+    version: doc.version,
+    effectiveDate: doc.effectiveDate,
+    title: doc.title,
+    subtitle: doc.subtitle,
+    sections: doc.sections.map((section) => ({
+      title: section.title,
+      paragraphs: section.paragraphs ?? [],
+      items: section.items ?? [],
+    })),
+  });
+}

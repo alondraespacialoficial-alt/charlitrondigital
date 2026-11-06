@@ -1,6 +1,6 @@
 # Revisión legal — Charlitron Digital y Aliados Charlitron
 
-**Estado**: borrador pendiente de revisión jurídica. El registro público de aliados sigue cerrado.
+**Estado**: los documentos de Aliados (Aviso Integral de Privacidad v1.2 y Términos y Condiciones v1.0, del 5 de noviembre de 2026) están incorporados tal como los aprobó el responsable; falta la revisión de un abogado y los pendientes de la sección 4. El aviso general del sitio sigue en borrador. El registro público de aliados sigue cerrado: el programa funciona solo por invitación administrativa.
 
 Los textos publicados viven en el código y son la fuente única; este documento no los copia para que no se desfasen:
 
@@ -8,8 +8,8 @@ Los textos publicados viven en el código y son la fuente única; este documento
 | --- | --- |
 | Aviso de privacidad general del sitio | `src/components/LegalPage.tsx` (pestaña 1) |
 | Términos y condiciones de uso del sitio | `src/components/LegalPage.tsx` (pestaña 2) |
-| Aviso de privacidad del programa Aliados (`/aliados/privacidad`) | `PRIVACY_SECTIONS` en `src/features/aliados/aliadosLegal.ts` |
-| Términos del programa Aliados (`/aliados/terminos`) | `TERMS_SECTIONS` en `src/features/aliados/aliadosLegal.ts` |
+| Aviso Integral de Privacidad de Aliados v1.2 (`/aliados/privacidad`) | `PRIVACY_SECTIONS` en `src/features/aliados/aliadosLegal.ts` |
+| Términos y Condiciones de Aliados v1.0 (`/aliados/terminos`) | `TERMS_SECTIONS` en `src/features/aliados/aliadosLegal.ts` |
 | Identificación del responsable | `src/data/legalEntity.ts` |
 | Pendientes jurídicos | `LEGAL_PENDING` en `src/features/aliados/aliadosLegal.ts` |
 
@@ -47,7 +47,7 @@ No se modificaron créditos de autoría ni los pies de página con la marca "Cha
 
 ## 4. Pendientes que requieren revisión jurídica
 
-Lista completa y vigente en `LEGAL_PENDING`. Resumen:
+La lista vigente está en `LEGAL_PENDING` (`aliadosLegal.ts`) y reemplaza a la numeración siguiente, que corresponde al borrador anterior y se conserva solo como histórico:
 
 1. Constancia escrita de la designación del responsable y de su aceptación (la autorización de publicar el domicilio ya fue otorgada).
 2. Relación de José Adrián con el tratamiento (personal del responsable o encargado).
@@ -65,9 +65,9 @@ Lista completa y vigente en `LEGAL_PENDING`. Resumen:
 
 ## 5. Activación del registro público
 
-Requiere **ambas** llaves; ninguna está abierta:
+No está autorizada: el modelo vigente es solo por invitación. Requeriría **ambas** llaves; ninguna está abierta:
 
-1. `ALIADOS_LEGAL_APPROVED = true` en `aliadosLegal.ts` (solo con `LEGAL_PENDING` vacío; una prueba lo exige).
+1. `ALIADOS_LEGAL_APPROVED = true` en `aliadosLegal.ts` (hoy `false`; una prueba lo exige).
 2. `aliados_settings.registration_open = true` en la base, con la migración `aliados-lab-0004-registration.sql` instalada.
 
 Además: configurar en el Supabase de Aliados las Redirect URLs (`/aliados/activar`), SMTP propio y la vigencia de las invitaciones, y probar una invitación real.
@@ -79,6 +79,14 @@ Además: configurar en el Supabase de Aliados las Redirect URLs (`/aliados/activ
 - La clave de servicio solo existe en el servidor (`/api/aliados-approve-registration`, `/api/aliados-resend-invitation`).
 - Auditoría de solo anexar; cobros y pagos inmutables (se corrigen con reversiones).
 - Registro: máximo 10 solicitudes por hora, 30 por día y 100 pendientes (migración 0004).
+
+## 7. Aceptación electrónica y versiones documentales
+
+- Flujo: invitación → activación de cuenta (contraseña) → pantalla `/aliados/aceptar` → verificación en la base → panel. Invitar, aprobar o crear la contraseña **no** registra aceptación.
+- Las dos casillas son independientes y nacen desmarcadas. La segunda solo confirma que el aviso estuvo a disposición; **no** es consentimiento expreso para datos fiscales, bancarios ni comunicaciones promocionales (pendiente en `LEGAL_PENDING`).
+- Evidencia en `ally_acceptances` (migración 0006): usuario autenticado, versiones y huellas SHA-256 de los textos, hora del servidor, acción, origen, cadena `x-forwarded-for` y agente de usuario (mejor esfuerzo, sin verificar: el cliente puede enviar sus propias cabeceras). Inmutable y auditada. Las versiones completas viven en `ally_legal_documents`, publicadas por la migración 0007, generada con `npm run generate:aliados-legal-seed` desde `aliadosLegal.ts`.
+- Nueva versión de un documento: se agrega como versión nueva (las anteriores no se editan) y se publica con una migración incremental nueva, no reescribiendo 0007; el generador actual solo cubre v1.0/v1.2 y deberá ajustarse para emitir solo versiones nuevas. Se decide caso por caso si exige nueva aceptación (`requires_reacceptance`).
+- Procedimientos internos de prospectos y ARCO: no se publican en este repositorio.
 
 **Responsable legal final**: Carlos Leonardo Álvarez Cedillo (pendiente de revisión y firma de abogado).
 **Fecha de validación final**: pendiente.
